@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/eirini"
 	cmdcommons "code.cloudfoundry.org/eirini/cmd"
-	"code.cloudfoundry.org/eirini/k8s/informers/staging"
+	"code.cloudfoundry.org/eirini/k8s/informers/task"
 	"code.cloudfoundry.org/eirini/util"
 	"code.cloudfoundry.org/lager"
 	"github.com/jessevdk/go-flags"
@@ -17,7 +17,7 @@ import (
 )
 
 type options struct {
-	ConfigFile string `short:"c" long:"config" description:"Config for running staging-reporter"`
+	ConfigFile string `short:"c" long:"config" description:"Config for running task-reporter"`
 }
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 
 	clientset := cmdcommons.CreateKubeClient(cfg.ConfigPath)
 
-	launchStagingReporter(
+	launchTaskReporter(
 		clientset,
 		cfg.CAPath,
 		cfg.EiriniCertPath,
@@ -39,7 +39,7 @@ func main() {
 	)
 }
 
-func launchStagingReporter(clientset kubernetes.Interface, ca, eiriniCert, eiriniKey, namespace string) {
+func launchTaskReporter(clientset kubernetes.Interface, ca, eiriniCert, eiriniKey, namespace string) {
 	httpClient, err := util.CreateTLSHTTPClient(
 		[]util.CertPaths{
 			{
@@ -51,15 +51,15 @@ func launchStagingReporter(clientset kubernetes.Interface, ca, eiriniCert, eirin
 	)
 	cmdcommons.ExitIfError(err)
 
-	stagingLogger := lager.NewLogger("staging-informer")
-	stagingLogger.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
-	reporter := staging.FailedStagingReporter{
+	taskLogger := lager.NewLogger("task-informer")
+	taskLogger.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
+	reporter := task.StateReporter{
 		Client: httpClient,
-		Logger: stagingLogger,
+		Logger: taskLogger,
 	}
-	stagingInformer := staging.NewInformer(clientset, 0, namespace, reporter, make(chan struct{}), stagingLogger)
+	taskInformer := task.NewInformer(clientset, 0, namespace, reporter, make(chan struct{}), taskLogger)
 
-	stagingInformer.Start()
+	taskInformer.Start()
 }
 
 func readConfigFile(path string) (*eirini.ReporterConfig, error) {
