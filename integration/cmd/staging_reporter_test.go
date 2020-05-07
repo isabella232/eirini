@@ -16,7 +16,7 @@ var _ = Describe("StagingReporter", func() {
 
 		command    *exec.Cmd
 		cmdPath    string
-		config     *eirini.StagingReporterConfig
+		config     *eirini.ReporterConfig
 		configFile *os.File
 	)
 
