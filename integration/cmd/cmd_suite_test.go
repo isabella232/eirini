@@ -80,7 +80,7 @@ func defaultEventReporterConfig() *eirini.EventReporterConfig {
 	return config
 }
 
-func defaultStagingReporterConfig() *eirini.ReporterConfig {
+func defaultReporterConfig() *eirini.ReporterConfig {
 	config := &eirini.ReporterConfig{
 		KubeConfig: eirini.KubeConfig{
 			ConfigPath: pathToTestFixture("kube.conf"),

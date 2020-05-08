@@ -45,7 +45,7 @@ var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
 
-func defaultStagingReporterConfig() *eirini.ReporterConfig {
+func defaultReporterConfig() *eirini.ReporterConfig {
 	config := &eirini.ReporterConfig{
 		KubeConfig: eirini.KubeConfig{
 			Namespace:  fixture.Namespace,
