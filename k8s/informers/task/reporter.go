@@ -24,7 +24,7 @@ func (r StateReporter) Report(job *batchv1.Job) {
 
 	if len(job.Status.Conditions) != 0 {
 		taskGUID := job.Labels[k8s.LabelGUID]
-		uri := fmt.Sprintf("%s/task/%s/completed", eiriniAddr, taskGUID)
+		uri := fmt.Sprintf("%s/tasks/%s/completed", eiriniAddr, taskGUID)
 		if err := utils.Put(r.Client, uri, nil); err != nil {
 			r.Logger.Error("cannot send task status response", err, lager.Data{"taskGuid": taskGUID})
 			return
