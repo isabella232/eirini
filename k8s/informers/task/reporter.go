@@ -11,20 +11,15 @@ import (
 )
 
 type StateReporter struct {
-	Client *http.Client
-	Logger lager.Logger
+	EiriniAddress string
+	Client        *http.Client
+	Logger        lager.Logger
 }
 
 func (r StateReporter) Report(job *batchv1.Job) {
-	eiriniAddr, err := utils.GetEnvVarValue("EIRINI_ADDRESS", job.Spec.Template.Spec.Containers[0].Env)
-	if err != nil {
-		r.Logger.Error("getting env variable 'EIRINI_ADDRESS' failed", err)
-		return
-	}
-
 	if len(job.Status.Conditions) != 0 {
 		taskGUID := job.Labels[k8s.LabelGUID]
-		uri := fmt.Sprintf("%s/tasks/%s/completed", eiriniAddr, taskGUID)
+		uri := fmt.Sprintf("%s/tasks/%s/completed", r.EiriniAddress, taskGUID)
 		if err := utils.Put(r.Client, uri, nil); err != nil {
 			r.Logger.Error("cannot send task status response", err, lager.Data{"taskGuid": taskGUID})
 			return

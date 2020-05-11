@@ -34,6 +34,7 @@ var _ = Describe("TaskReporter", func() {
 		eiriniServer.Start()
 
 		config := &eirini.ReporterConfig{
+			EiriniAddress: eiriniServer.URL(),
 			KubeConfig: eirini.KubeConfig{
 				Namespace:  fixture.Namespace,
 				ConfigPath: fixture.KubeConfigPath,

@@ -149,6 +149,7 @@ func runOpi(certPath, keyPath string) (*gexec.Session, string, string) {
 			UploaderImage:   "docker.io/eirini/integration_test_staging",
 
 			ApplicationServiceAccount: "default",
+			JobActiveDeadlineSeconds:  5,
 		},
 	}
 	eiriniConfigFile, err := util.CreateConfigFile(eiriniConfig)

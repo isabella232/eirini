@@ -499,22 +499,31 @@ var _ = Describe("Desiretask", func() {
 				Items: []batch.Job{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "staging-job",
+							Name: "my-job",
 						}},
 				},
 			}
 			fakeJobClient.ListReturns(jobs, nil)
 		})
 
-		It("should delete the job", func() {
-			Expect(desirer.Delete(taskGUID)).To(Succeed())
+		It("should delete a staging job", func() {
+			Expect(desirer.DeleteStaging(taskGUID)).To(Succeed())
 
 			Expect(fakeJobClient.ListCallCount()).To(Equal(1))
 			Expect(fakeJobClient.ListArgsForCall(0).LabelSelector).To(Equal(fmt.Sprintf("%s=%s", LabelStagingGUID, taskGUID)))
 
 			Expect(fakeJobClient.DeleteCallCount()).To(Equal(1))
 			jobName, _ := fakeJobClient.DeleteArgsForCall(0)
-			Expect(jobName).To(Equal("staging-job"))
+			Expect(jobName).To(Equal("my-job"))
+		})
+
+		When("deleting a non-staging job", func() {
+			It("selects jobs using the task label guid", func() {
+				Expect(desirer.Delete(taskGUID)).To(Succeed())
+
+				Expect(fakeJobClient.ListCallCount()).To(Equal(1))
+				Expect(fakeJobClient.ListArgsForCall(0).LabelSelector).To(Equal(fmt.Sprintf("%s=%s", LabelGUID, taskGUID)))
+			})
 		})
 
 		Context("when the job does not exist", func() {
@@ -523,7 +532,7 @@ var _ = Describe("Desiretask", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(desirer.Delete(taskGUID)).To(MatchError(fmt.Sprintf("job with guid %s should have 1 instance, but it has: %d", taskGUID, 0)))
+				Expect(desirer.DeleteStaging(taskGUID)).To(MatchError(fmt.Sprintf("job with guid %s should have 1 instance, but it has: %d", taskGUID, 0)))
 				Expect(fakeJobClient.ListCallCount()).To(Equal(1))
 				Expect(fakeJobClient.DeleteCallCount()).To(BeZero())
 			})
@@ -537,7 +546,7 @@ var _ = Describe("Desiretask", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(desirer.Delete(taskGUID)).To(MatchError(fmt.Sprintf("job with guid %s should have 1 instance, but it has: %d", taskGUID, 2)))
+				Expect(desirer.DeleteStaging(taskGUID)).To(MatchError(fmt.Sprintf("job with guid %s should have 1 instance, but it has: %d", taskGUID, 2)))
 				Expect(fakeJobClient.ListCallCount()).To(Equal(1))
 				Expect(fakeJobClient.DeleteCallCount()).To(BeZero())
 			})
@@ -550,7 +559,7 @@ var _ = Describe("Desiretask", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(desirer.Delete(taskGUID)).To(MatchError("failed to list jobs"))
+				Expect(desirer.DeleteStaging(taskGUID)).To(MatchError("failed to list jobs"))
 				Expect(fakeJobClient.ListCallCount()).To(Equal(1))
 				Expect(fakeJobClient.DeleteCallCount()).To(BeZero())
 			})
@@ -563,7 +572,7 @@ var _ = Describe("Desiretask", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(desirer.Delete(taskGUID)).To(MatchError(ContainSubstring("failed to delete")))
+				Expect(desirer.DeleteStaging(taskGUID)).To(MatchError(ContainSubstring("failed to delete")))
 			})
 		})
 

@@ -61,8 +61,8 @@ func (c *Informer) Start() {
 }
 
 func (c *Informer) updateFunc(_ interface{}, newObj interface{}) {
-	pod := newObj.(*batchv1.Job)
-	c.reporter.Report(pod)
+	job := newObj.(*batchv1.Job)
+	c.reporter.Report(job)
 }
 
 func tweakListOpts(opts *metav1.ListOptions) {

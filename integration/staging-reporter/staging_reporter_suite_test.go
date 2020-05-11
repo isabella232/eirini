@@ -3,7 +3,6 @@ package staging_reporter_test
 import (
 	"testing"
 
-	"code.cloudfoundry.org/eirini"
 	"code.cloudfoundry.org/eirini/integration/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,17 +43,3 @@ var _ = AfterEach(func() {
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
-
-func defaultReporterConfig() *eirini.ReporterConfig {
-	config := &eirini.ReporterConfig{
-		KubeConfig: eirini.KubeConfig{
-			Namespace:  fixture.Namespace,
-			ConfigPath: fixture.KubeConfigPath,
-		},
-		EiriniCertPath: util.PathToTestFixture("cert"),
-		CAPath:         util.PathToTestFixture("cert"),
-		EiriniKeyPath:  util.PathToTestFixture("key"),
-	}
-
-	return config
-}

@@ -84,6 +84,7 @@ type Properties struct {
 	UploaderImage                    string `yaml:"uploader_image"`
 	ExecutorImage                    string `yaml:"executor_image"`
 	AppMetricsEmissionIntervalInSecs int    `yaml:"app_metrics_emission_interval_in_secs"`
+	JobActiveDeadlineSeconds         int    `yaml:"job_active_deadline_seconds"`
 
 	CCCertPath string `yaml:"cc_cert_path"`
 	CCKeyPath  string `yaml:"cc_key_path"`
@@ -129,6 +130,7 @@ type MetricsCollectorConfig struct {
 }
 
 type ReporterConfig struct {
+	EiriniAddress  string `yaml:"eirini_address"`
 	EiriniCertPath string `yaml:"eirini_cert_path"`
 	EiriniKeyPath  string `yaml:"eirini_key_path"`
 	CAPath         string `yaml:"ca_path"`

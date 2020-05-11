@@ -30,8 +30,13 @@ func main() {
 
 	clientset := cmdcommons.CreateKubeClient(cfg.ConfigPath)
 
+	if cfg.EiriniAddress == "" {
+		cmdcommons.ExitIfError(errors.New("EiriniAddress is missing"))
+	}
+
 	launchTaskReporter(
 		clientset,
+		cfg.EiriniAddress,
 		cfg.CAPath,
 		cfg.EiriniCertPath,
 		cfg.EiriniKeyPath,
@@ -39,7 +44,7 @@ func main() {
 	)
 }
 
-func launchTaskReporter(clientset kubernetes.Interface, ca, eiriniCert, eiriniKey, namespace string) {
+func launchTaskReporter(clientset kubernetes.Interface, eiriniAddress, ca, eiriniCert, eiriniKey, namespace string) {
 	httpClient, err := util.CreateTLSHTTPClient(
 		[]util.CertPaths{
 			{
@@ -53,9 +58,11 @@ func launchTaskReporter(clientset kubernetes.Interface, ca, eiriniCert, eiriniKe
 
 	taskLogger := lager.NewLogger("task-informer")
 	taskLogger.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
+
 	reporter := task.StateReporter{
-		Client: httpClient,
-		Logger: taskLogger,
+		EiriniAddress: eiriniAddress,
+		Client:        httpClient,
+		Logger:        taskLogger,
 	}
 	taskInformer := task.NewInformer(clientset, 0, namespace, reporter, make(chan struct{}), taskLogger)
 
