@@ -83,14 +83,16 @@ var _ = Describe("TaskReporter", func() {
 		eiriniServer.Close()
 	})
 
-	BeforeEach(func() {
-		eiriniServer.Reset()
-		eiriniServer.AppendHandlers(ghttp.VerifyRequest("PUT", "/tasks/the-task-guid/completed"))
-	})
+	When("a task job succeeds", func() {
+		BeforeEach(func() {
+			eiriniServer.Reset()
+			eiriniServer.AppendHandlers(ghttp.VerifyRequest("PUT", "/tasks/the-task-guid/completed"))
+		})
 
-	It("notifies eirini of a task completion", func() {
-		Expect(taskDesirer.Desire(task)).To(Succeed())
-		Eventually(eiriniServer.ReceivedRequests, "10s").Should(HaveLen(1))
+		It("notifies eirini of a task completion", func() {
+			Expect(taskDesirer.Desire(task)).To(Succeed())
+			Eventually(eiriniServer.ReceivedRequests, "10s").Should(HaveLen(1))
+		})
 	})
 
 	When("a task job fails", func() {

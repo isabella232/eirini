@@ -20,12 +20,18 @@ var (
 	pathToTaskReporter string
 )
 
-var _ = BeforeSuite(func() {
+var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
 	pathToTaskReporter, err = gexec.Build("code.cloudfoundry.org/eirini/cmd/task-reporter")
 	Expect(err).NotTo(HaveOccurred())
-
+	return []byte(pathToTaskReporter)
+}, func(data []byte) {
+	pathToTaskReporter = string(data)
 	fixture = util.NewFixture(GinkgoWriter)
+})
+
+var _ = SynchronizedAfterSuite(func() {}, func() {
+	gexec.CleanupBuildArtifacts()
 })
 
 var _ = BeforeEach(func() {
@@ -38,8 +44,4 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	fixture.TearDown()
-})
-
-var _ = AfterSuite(func() {
-	gexec.CleanupBuildArtifacts()
 })
