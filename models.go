@@ -84,7 +84,6 @@ type Properties struct {
 	UploaderImage                    string `yaml:"uploader_image"`
 	ExecutorImage                    string `yaml:"executor_image"`
 	AppMetricsEmissionIntervalInSecs int    `yaml:"app_metrics_emission_interval_in_secs"`
-	JobActiveDeadlineSeconds         int    `yaml:"job_active_deadline_seconds"`
 
 	CCCertPath string `yaml:"cc_cert_path"`
 	CCKeyPath  string `yaml:"cc_key_path"`

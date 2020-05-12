@@ -117,14 +117,13 @@ func initTaskDesirer(cfg *eirini.Config, clientset kubernetes.Interface) *k8s.Ta
 	logger.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
 
 	return &k8s.TaskDesirer{
-		Namespace:             cfg.Properties.Namespace,
-		TLSConfig:             tlsConfigs,
-		ServiceAccountName:    cfg.Properties.ApplicationServiceAccount,
-		RegistrySecretName:    cfg.Properties.RegistrySecretName,
-		ActiveDeadlineSeconds: cfg.Properties.JobActiveDeadlineSeconds,
-		SecretsClient:         clientset.CoreV1().Secrets(cfg.Properties.Namespace),
-		JobClient:             clientset.BatchV1().Jobs(cfg.Properties.Namespace),
-		Logger:                logger,
+		Namespace:          cfg.Properties.Namespace,
+		TLSConfig:          tlsConfigs,
+		ServiceAccountName: cfg.Properties.ApplicationServiceAccount,
+		RegistrySecretName: cfg.Properties.RegistrySecretName,
+		SecretsClient:      clientset.CoreV1().Secrets(cfg.Properties.Namespace),
+		JobClient:          clientset.BatchV1().Jobs(cfg.Properties.Namespace),
+		Logger:             logger,
 	}
 }
 

@@ -16,11 +16,10 @@ import (
 )
 
 const (
-	DefaultActiveDeadlineSeconds = 900
-	stagingSourceType            = "STG"
-	taskSourceType               = "TASK"
-	parallelism                  = 1
-	completions                  = 1
+	stagingSourceType = "STG"
+	taskSourceType    = "TASK"
+	parallelism       = 1
+	completions       = 1
 )
 
 //counterfeiter:generate . JobClient
@@ -40,15 +39,14 @@ type StagingConfigTLS struct {
 }
 
 type TaskDesirer struct {
-	Namespace             string
-	CertsSecretName       string
-	TLSConfig             []StagingConfigTLS
-	ServiceAccountName    string
-	RegistrySecretName    string
-	ActiveDeadlineSeconds int
-	JobClient             JobClient
-	Logger                lager.Logger
-	SecretsClient         SecretsClient
+	Namespace          string
+	CertsSecretName    string
+	TLSConfig          []StagingConfigTLS
+	ServiceAccountName string
+	RegistrySecretName string
+	JobClient          JobClient
+	Logger             lager.Logger
+	SecretsClient      SecretsClient
 }
 
 func (d *TaskDesirer) Desire(task *opi.Task) error {
@@ -311,9 +309,9 @@ func (d *TaskDesirer) toJob(task *opi.Task) *batch.Job {
 
 	job := &batch.Job{
 		Spec: batch.JobSpec{
-			ActiveDeadlineSeconds: d.getActiveDeadlineSeconds(),
-			Parallelism:           int32ptr(parallelism),
-			Completions:           int32ptr(completions),
+			Parallelism:  int32ptr(parallelism),
+			Completions:  int32ptr(completions),
+			BackoffLimit: int32ptr(0),
 			Template: v1.PodTemplateSpec{
 				Spec: v1.PodSpec{
 					AutomountServiceAccountToken: &automountServiceAccountToken,
@@ -350,11 +348,4 @@ func (d *TaskDesirer) toJob(task *opi.Task) *batch.Job {
 	job.Spec.Template.Spec.ServiceAccountName = d.ServiceAccountName
 
 	return job
-}
-
-func (d *TaskDesirer) getActiveDeadlineSeconds() *int64 {
-	if d.ActiveDeadlineSeconds > 0 {
-		return int64ptr(d.ActiveDeadlineSeconds)
-	}
-	return int64ptr(DefaultActiveDeadlineSeconds)
 }

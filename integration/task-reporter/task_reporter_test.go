@@ -47,11 +47,10 @@ var _ = Describe("TaskReporter", func() {
 		session, configFile = util.RunBinary(pathToTaskReporter, config)
 
 		taskDesirer = k8s.TaskDesirer{
-			Namespace:             fixture.Namespace,
-			ServiceAccountName:    "",
-			ActiveDeadlineSeconds: 5,
-			JobClient:             fixture.Clientset.BatchV1().Jobs(fixture.Namespace),
-			Logger:                lagertest.NewTestLogger("task-reporter-test"),
+			Namespace:          fixture.Namespace,
+			ServiceAccountName: "",
+			JobClient:          fixture.Clientset.BatchV1().Jobs(fixture.Namespace),
+			Logger:             lagertest.NewTestLogger("task-reporter-test"),
 		}
 
 		task = &opi.Task{
