@@ -17,115 +17,115 @@ spec:
               type: object
               properties:
                 guid:
-                    type: string
+                  type: string
                 version:
-                    type: string
+                  type: string
                 processGUID:
-                    type: string
+                  type: string
                 processType:
-                    type: string
+                  type: string
                 appGUID:
-                    type: string
+                  type: string
                 appName:
-                    type: string
+                  type: string
                 spaceGUID:
-                    type: string
+                  type: string
                 spaceName:
-                    type: string
+                  type: string
                 organizationGUID:
-                    type: string
+                  type: string
                 organizationName:
-                    type: string
+                  type: string
                 placementTags:
-                    type: array
-                    items:
-                      type: string
+                  type: array
+                  items:
+                    type: string
                 ports:
-                    type: array
-                    items:
-                      type: integer
-                      format: int32
+                  type: array
+                  items:
+                    type: integer
+                    format: int32
                 routes:
-                    type: object
-                    additionalProperties:
-                        type: array
-                        items:
-                            type: object
-                            properties:
-                                hostname:
-                                    type: string
-                                port:
-                                    type: integer
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        hostname:
+                          type: string
+                        port:
+                          type: integer
                 environment:
-                    type: object
-                    additionalProperties:
-                        type: string
+                  type: object
+                  additionalProperties:
+                    type: string
                 egressRules:
-                    type: array
-                    items:
-                      type: string
+                  type: array
+                  items:
+                    type: string
                 numInstances:
-                    type: integer
+                  type: integer
                 lastUpdated:
-                    type: string
+                  type: string
                 healthCheckType:
-                    type: string
+                  type: string
                 healthCheckHTTPEndpoint:
-                    type: string
+                  type: string
                 healthCheckTimeoutMs:
-                    type: integer
-                    format: uint32
+                  type: integer
+                  format: uint32
                 startTimeoutMs:
-                    type: integer
-                    format: uint32
+                  type: integer
+                  format: uint32
                 memoryMB:
-                    type: integer
-                    format: int64
+                  type: integer
+                  format: int64
                 diskMB:
-                    type: integer
-                    format: int64
+                  type: integer
+                  format: int64
                 cpuWeight:
-                    type: integer
-                    format: uint8
+                  type: integer
+                  format: uint8
                 volumeMounts:
-                    type: array
-                    items:
-                        type: object
-                        properties:
-                            volumeID:
-                                type: string
-                            mountDir:
-                                type: string
-                lifecycle:
+                  type: array
+                  items:
                     type: object
-                    maxProperties: 1
                     properties:
-                      docker:
-                        type: object
-                        properties:
-                          image:
-                            type: string
-                          command:
-                            type: array
-                            items:
-                              type: string
-                          registryUsername:
-                            type: string
-                          registryPassword: #should this be secured somehow?
-                            type: string
-                      buildpack:
-                        type: object
-                        properties:
-                          dropletHash:
-                            type: string
-                          dropletGUID:
-                            type: string
-                          startCommand:
-                            type: string
-                userDefinedAnnotations:
-                    type: object
-                    additionalProperties:
+                      volumeID:
                         type: string
+                      mountDir:
+                        type: string
+                lifecycle:
+                  type: object
+                  maxProperties: 1
+                  properties:
+                    docker:
+                      type: object
+                      properties:
+                        image:
+                          type: string
+                        command:
+                          type: array
+                          items:
+                            type: string
+                        registryUsername:
+                          type: string
+                        registryPassword: #should this be secured somehow?
+                          type: string
+                    buildpack:
+                      type: object
+                      properties:
+                        dropletHash:
+                          type: string
+                        dropletGUID:
+                          type: string
+                        startCommand:
+                          type: string
+                userDefinedAnnotations:
+                  type: object
+                  additionalProperties:
+                    type: string
             status:
               type: object
               properties:
@@ -154,4 +154,4 @@ spec:
     singular: lrp
     kind: LongRunningProcess
     shortNames:
-    - lrp
+      - lrp
