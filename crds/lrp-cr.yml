@@ -1,0 +1,57 @@
+apiVersion: eirini.cloudfoundry.org/v1
+kind: LongRunningProcess
+metadata:
+    name: my-first-lrp
+spec:
+    guid: my-guid
+    version: "1"
+    processGUID: proc-guid
+    processType: thing
+    appGUID: my-app-guid
+    appName: my-app
+    spaceGUID: space-guid
+    spaceName: my-space
+    organizationGUID: org-guid
+    organizationName: my-org
+    placementTags:
+        - jim
+        - bob
+    ports:
+        - 8080
+        - 8081
+    routes:
+        cf-route:
+            - hostname: foo.bar.com
+              port: 8080
+            - hostname: foo.bar.com
+              port: 8081
+        k8s-route:
+            - hostname: foo.bar.com
+              port: 8080
+            - hostname: foo.bar.com
+              port: 8081
+    environment:
+        SOME_SETTING: jim
+        ANOTHER_THING: "96"
+    egressRules:
+        - one thing
+        - something else
+    numInstances: 9
+    lastUpdated: 23rd June 1972
+    healthCheckType: pid
+    healthCheckHTTPEndpoint: /healthz
+    healthCheckTimeoutMs: 2000
+    startTimeoutMs: 10000
+    memoryMB: 1024
+    diskMB: 1024
+    cpuWeight: 87
+    volumeMounts:
+        - volumeID: myvol
+          mountDir: /mnt/myvol
+        - volumeID: hisvol
+          mountDir: /mnt/hisvol
+    lifecycle:
+      docker:
+        image: "whatever"
+status:
+  replicas: 57
