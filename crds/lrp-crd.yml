@@ -13,7 +13,6 @@ spec:
           type: object
           properties:
             spec:
-              # required: [cronSpec, replicas]
               type: object
               properties:
                 guid:
@@ -32,9 +31,9 @@ spec:
                   type: string
                 spaceName:
                   type: string
-                organizationGUID:
+                orgGUID:
                   type: string
-                organizationName:
+                orgName:
                   type: string
                 placementTags:
                   type: array

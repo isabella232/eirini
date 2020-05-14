@@ -1,0 +1,21 @@
+apiVersion: eirini.cloudfoundry.org/v1
+kind: Task
+metadata:
+    name: my-first-task
+spec:
+    guid: my-guid
+    name: task-name
+    appGUID: my-app-guid
+    appName: my-app
+    spaceGUID: space-guid
+    spaceName: my-space
+    orgGUID: org-guid
+    orgName: my-org
+    environment:
+    - name: SOME_SETTING
+      value: jim
+    - name: ANOTHER_THING
+      value: "96"
+    lifecycle:
+      docker:
+        image: "whatever"

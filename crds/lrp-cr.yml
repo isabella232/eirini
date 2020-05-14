@@ -11,8 +11,8 @@ spec:
     appName: my-app
     spaceGUID: space-guid
     spaceName: my-space
-    organizationGUID: org-guid
-    organizationName: my-org
+    orgGUID: org-guid
+    orgName: my-org
     placementTags:
         - jim
         - bob
@@ -53,5 +53,3 @@ spec:
     lifecycle:
       docker:
         image: "whatever"
-status:
-  replicas: 57
