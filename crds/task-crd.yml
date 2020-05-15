@@ -73,7 +73,7 @@ spec:
                     type: string
                     enum:
                     - Pending
-                    - InProgress
+                    - Running
                     - Completed
                     - Failed
                     default: Pending

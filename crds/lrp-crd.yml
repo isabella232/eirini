@@ -143,8 +143,22 @@ spec:
                         format: uint32
                       state:
                         type: string
-                      placementError:
+                        enum:
+                        - Pending
+                        - Running
+                        - Failed
+                        default: Pending
+                      exitStatus:
+                        type: integer
+                        format: uint32
+                      exitReason:
                         type: string
+                      crashCount:
+                        type: integer
+                        format: uint64
+                      crashTimestamp:
+                        type: integer
+                        format: uint64
       subresources:
         status: {}
   scope: Namespaced
