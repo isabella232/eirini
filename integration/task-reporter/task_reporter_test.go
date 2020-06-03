@@ -41,7 +41,7 @@ var _ = Describe("TaskReporter", func() {
 
 		handlers = []http.HandlerFunc{
 			ghttp.VerifyRequest("POST", "/the-callback"),
-			// ghttp.VerifyJSONRepresenting(cf.TaskCompletedRequest{TaskGUID: "the-task-guid"}),
+			ghttp.VerifyJSONRepresenting(cf.TaskCompletedRequest{TaskGUID: "the-task-guid"}),
 		}
 
 		config := &eirini.TaskReporterConfig{
@@ -84,6 +84,7 @@ var _ = Describe("TaskReporter", func() {
 		cloudControllerServer.AppendHandlers(
 			ghttp.CombineHandlers(handlers...),
 		)
+
 		Expect(taskDesirer.Desire(task)).To(Succeed())
 	})
 
@@ -99,9 +100,10 @@ var _ = Describe("TaskReporter", func() {
 
 	It("notifies the cloud controller of a task completion", func() {
 		Eventually(cloudControllerServer.ReceivedRequests, "10s").Should(HaveLen(1))
+		Consistently(cloudControllerServer.ReceivedRequests, "10s").Should(HaveLen(1))
 	})
 
-	FIt("deletes the job", func() {
+	It("deletes the job", func() {
 		Eventually(getTaskJobsFn("the-task-guid"), "20s").Should(BeEmpty())
 	})
 
@@ -122,6 +124,7 @@ var _ = Describe("TaskReporter", func() {
 
 		It("notifies the cloud controller of a task failure", func() {
 			Eventually(cloudControllerServer.ReceivedRequests, "10s").Should(HaveLen(1))
+			Consistently(cloudControllerServer.ReceivedRequests, "10s").Should(HaveLen(1))
 		})
 
 		It("deletes the job", func() {

@@ -14,7 +14,7 @@ import (
 )
 
 type Reporter interface {
-	Report(*v1.Pod)
+	Report(*v1.Pod, *v1.Pod)
 }
 
 type Informer struct {
@@ -60,9 +60,10 @@ func (c *Informer) Start() {
 	informer.Run(c.stopperChan)
 }
 
-func (c *Informer) updateFunc(_ interface{}, newObj interface{}) {
+func (c *Informer) updateFunc(oldObj interface{}, newObj interface{}) {
+	oldPod := oldObj.(*v1.Pod)
 	pod := newObj.(*v1.Pod)
-	c.reporter.Report(pod)
+	c.reporter.Report(oldPod, pod)
 }
 
 func tweakListOpts(opts *metav1.ListOptions) {

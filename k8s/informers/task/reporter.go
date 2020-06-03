@@ -22,20 +22,15 @@ type StateReporter struct {
 	TaskDeleter Deleter
 }
 
-func (r StateReporter) Report(pod *corev1.Pod) {
+func (r StateReporter) Report(oldPod, pod *corev1.Pod) {
 	taskGUID := pod.Annotations[k8s.AnnotationGUID]
 	uri := pod.Annotations[k8s.AnnotationCompletionCallback]
 
-	taskContainerStatus, ok := getTaskContainerStatus(pod)
-	if !ok {
-		r.Logger.Error("task container not found", nil, lager.Data{"taskGuid": taskGUID})
-		return
-	}
-	if taskContainerStatus.State.Terminated == nil {
+	if !r.taskContainerHasJustTerminated(taskGUID, oldPod, pod) {
 		return
 	}
 
-	req := r.generateTaskComletedRequest(taskGUID, taskContainerStatus)
+	req := r.generateTaskComletedRequest(taskGUID, pod)
 
 	if err := utils.Post(r.Client, uri, req); err != nil {
 		r.Logger.Error("cannot send task status response", err, lager.Data{"taskGuid": taskGUID})
@@ -46,11 +41,32 @@ func (r StateReporter) Report(pod *corev1.Pod) {
 	}
 }
 
-func (r StateReporter) generateTaskComletedRequest(guid string, status corev1.ContainerStatus) cf.TaskCompletedRequest {
+func (r StateReporter) taskContainerHasJustTerminated(taskGUID string, oldPod, pod *corev1.Pod) bool {
+	oldTaskContainerStatus, hasOldTaskContainerStatus := getTaskContainerStatus(oldPod)
+	taskContainerStatus, hasTaskContainerStatus := getTaskContainerStatus(pod)
+
+	if !hasTaskContainerStatus {
+		r.Logger.Error("updated pod has no task container status", nil, lager.Data{"taskGuid": taskGUID})
+		return false
+	}
+
+	if !isTerminatedStatus(taskContainerStatus) {
+		return false
+	}
+
+	return hasOldTaskContainerStatus && !isTerminatedStatus(oldTaskContainerStatus)
+}
+
+func isTerminatedStatus(status corev1.ContainerStatus) bool {
+	return status.State.Terminated != nil
+}
+
+func (r StateReporter) generateTaskComletedRequest(guid string, pod *corev1.Pod) cf.TaskCompletedRequest {
 	res := cf.TaskCompletedRequest{
 		TaskGUID: guid,
 	}
-	terminated := status.State.Terminated
+	taskContainerStatus, _ := getTaskContainerStatus(pod)
+	terminated := taskContainerStatus.State.Terminated
 
 	if terminated.ExitCode != 0 {
 		res.Failed = true
