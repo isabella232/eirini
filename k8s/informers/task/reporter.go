@@ -30,7 +30,7 @@ func (r StateReporter) Report(oldPod, pod *corev1.Pod) {
 		return
 	}
 
-	req := r.generateTaskComletedRequest(taskGUID, pod)
+	req := r.generateTaskCompletedRequest(taskGUID, pod)
 
 	if err := utils.Post(r.Client, uri, req); err != nil {
 		r.Logger.Error("cannot send task status response", err, lager.Data{"taskGuid": taskGUID})
@@ -46,7 +46,7 @@ func (r StateReporter) taskContainerHasJustTerminated(taskGUID string, oldPod, p
 	taskContainerStatus, hasTaskContainerStatus := getTaskContainerStatus(pod)
 
 	if !hasTaskContainerStatus {
-		r.Logger.Error("updated pod has no task container status", nil, lager.Data{"taskGuid": taskGUID})
+		r.Logger.Info("updated pod has no task container status", nil, lager.Data{"taskGuid": taskGUID})
 		return false
 	}
 
@@ -61,7 +61,7 @@ func isTerminatedStatus(status corev1.ContainerStatus) bool {
 	return status.State.Terminated != nil
 }
 
-func (r StateReporter) generateTaskComletedRequest(guid string, pod *corev1.Pod) cf.TaskCompletedRequest {
+func (r StateReporter) generateTaskCompletedRequest(guid string, pod *corev1.Pod) cf.TaskCompletedRequest {
 	res := cf.TaskCompletedRequest{
 		TaskGUID: guid,
 	}
