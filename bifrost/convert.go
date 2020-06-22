@@ -114,6 +114,17 @@ func (c *OPIConverter) ConvertLRP(request cf.DesireLRPRequest) (opi.LRP, error) 
 		diskMB = request.DiskMB
 	}
 
+	sidecars := []opi.Sidecar{}
+	for _, sidecar := range request.Sidecars {
+		sidecars = append(sidecars, opi.Sidecar{
+			Name:         sidecar.Name,
+			Environment:  sidecar.Environment,
+			ProcessTypes: sidecar.ProcessTypes,
+			MemoryMB:     sidecar.MemoryMB,
+		})
+
+	}
+
 	return opi.LRP{
 		AppName:                request.AppName,
 		AppGUID:                request.AppGUID,
@@ -139,6 +150,7 @@ func (c *OPIConverter) ConvertLRP(request cf.DesireLRPRequest) (opi.LRP, error) 
 		UserDefinedAnnotations: request.UserDefinedAnnotations,
 		PrivateRegistry:        privateRegistry,
 		RunsAsRoot:             runsAsRoot,
+		Sidecars:               sidecars,
 	}, nil
 }
 

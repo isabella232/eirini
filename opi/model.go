@@ -50,6 +50,15 @@ type LRP struct {
 	AppURIs                string
 	LastUpdated            string
 	UserDefinedAnnotations map[string]string
+	Sidecars               []Sidecar
+}
+
+type Sidecar struct {
+	Name         string
+	Environment  map[string]string
+	Command      []string
+	ProcessTypes []string
+	MemoryMB     int64
 }
 
 type PrivateRegistry struct {

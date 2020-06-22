@@ -52,7 +52,16 @@ type DesireLRPRequest struct {
 	DropletGUID             string                     `json:"droplet_guid"`
 	StartCommand            string                     `json:"start_command"`
 	UserDefinedAnnotations  map[string]string          `json:"user_defined_annotations"`
+	Sidecars                []Sidecar                  `json:"sidecars"`
 	LRP                     string
+}
+
+type Sidecar struct {
+	Name         string            `json:"name"`
+	Environment  map[string]string `json:"environment"`
+	Command      []string          `json:"command"`
+	ProcessTypes []string          `json:"process_types"`
+	MemoryMB     int64             `json:"memory_mb"`
 }
 
 type DesiredLRPSchedulingInfo struct {

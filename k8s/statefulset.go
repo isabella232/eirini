@@ -465,6 +465,61 @@ func (m *StatefulSetDesirer) toStatefulSet(lrp *opi.LRP) *appsv1.StatefulSet {
 	automountServiceAccountToken := false
 	allowPrivilegeEscalation := false
 
+	appContainers := []corev1.Container{
+		{
+			Name:            "opi",
+			Image:           lrp.Image,
+			ImagePullPolicy: corev1.PullAlways,
+			Command:         lrp.Command,
+			Env:             envs,
+			Ports:           ports,
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			},
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory:           memory,
+					corev1.ResourceEphemeralStorage: ephemeralStorage,
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceMemory: memory,
+					corev1.ResourceCPU:    cpu,
+				},
+			},
+			VolumeMounts: volumeMounts,
+		},
+	}
+
+	for _, sidecar := range lrp.Sidecars {
+		sidecarEnvs := MapToEnvVar(sidecar.Environment)
+		env := append(sidecarEnvs, fieldEnvs...)
+		sidecarMemory := *resource.NewScaledQuantity(sidecar.MemoryMB, resource.Mega)
+		sidecarContainer := corev1.Container{
+			Name:            sidecar.Name,
+			Image:           lrp.Image,
+			ImagePullPolicy: corev1.PullAlways,
+			Command:         sidecar.Command,
+			Env:             env,
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			},
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory:           sidecarMemory,
+					corev1.ResourceEphemeralStorage: ephemeralStorage,
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceMemory: memory,
+					corev1.ResourceCPU:    cpu,
+				},
+			},
+			LivenessProbe:  livenessProbe,
+			ReadinessProbe: readinessProbe,
+			VolumeMounts:   volumeMounts,
+		}
+		appContainers = append(appContainers, sidecarContainer)
+	}
+
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: m.statefulSetName(lrp),
@@ -476,35 +531,10 @@ func (m *StatefulSetDesirer) toStatefulSet(lrp *opi.LRP) *appsv1.StatefulSet {
 				Spec: corev1.PodSpec{
 					AutomountServiceAccountToken: &automountServiceAccountToken,
 					ImagePullSecrets:             m.calculateImagePullSecrets(lrp),
-					Containers: []corev1.Container{
-						{
-							Name:            "opi",
-							Image:           lrp.Image,
-							ImagePullPolicy: corev1.PullAlways,
-							Command:         lrp.Command,
-							Env:             envs,
-							Ports:           ports,
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-							},
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory:           memory,
-									corev1.ResourceEphemeralStorage: ephemeralStorage,
-								},
-								Requests: corev1.ResourceList{
-									corev1.ResourceMemory: memory,
-									corev1.ResourceCPU:    cpu,
-								},
-							},
-							LivenessProbe:  livenessProbe,
-							ReadinessProbe: readinessProbe,
-							VolumeMounts:   volumeMounts,
-						},
-					},
-					SecurityContext:    m.getGetSecurityContext(lrp),
-					ServiceAccountName: m.ApplicationServiceAccount,
-					Volumes:            volumes,
+					Containers:                   appContainers,
+					SecurityContext:              m.getGetSecurityContext(lrp),
+					ServiceAccountName:           m.ApplicationServiceAccount,
+					Volumes:                      volumes,
 				},
 			},
 		},
