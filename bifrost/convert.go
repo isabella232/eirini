@@ -118,6 +118,7 @@ func (c *OPIConverter) ConvertLRP(request cf.DesireLRPRequest) (opi.LRP, error) 
 	for _, sidecar := range request.Sidecars {
 		sidecars = append(sidecars, opi.Sidecar{
 			Name:         sidecar.Name,
+			Command:      sidecar.Command,
 			Environment:  sidecar.Environment,
 			ProcessTypes: sidecar.ProcessTypes,
 			MemoryMB:     sidecar.MemoryMB,

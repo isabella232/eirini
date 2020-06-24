@@ -509,7 +509,7 @@ func (m *StatefulSetDesirer) toStatefulSet(lrp *opi.LRP) *appsv1.StatefulSet {
 					corev1.ResourceEphemeralStorage: ephemeralStorage,
 				},
 				Requests: corev1.ResourceList{
-					corev1.ResourceMemory: memory,
+					corev1.ResourceMemory: sidecarMemory,
 					corev1.ResourceCPU:    cpu,
 				},
 			},
