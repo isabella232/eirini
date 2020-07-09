@@ -53,9 +53,9 @@ type LRP struct {
 }
 
 type PrivateRegistry struct {
-	Server   string
-	Username string
-	Password string
+	Server   string `json:"server"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type VolumeMount struct {
@@ -80,22 +80,22 @@ type Healtcheck struct {
 // A Task is a one-off process that is run exactly once and returns a
 // result.
 type Task struct {
-	GUID               string
-	Name               string
-	Image              string
-	CompletionCallback string
-	PrivateRegistry    *PrivateRegistry
-	Env                map[string]string
-	Command            []string
-	AppName            string
-	AppGUID            string
-	OrgName            string
-	OrgGUID            string
-	SpaceName          string
-	SpaceGUID          string
-	MemoryMB           int64
-	DiskMB             int64
-	CPUWeight          uint8
+	GUID               string            `json:"guid"`
+	Name               string            `json:"name"`
+	Image              string            `json:"image"`
+	CompletionCallback string            `json:"completionCallback"`
+	PrivateRegistry    *PrivateRegistry  `json:"privateRegistry,omitempty"`
+	Env                map[string]string `json:"env"`
+	Command            []string          `json:"command"`
+	AppName            string            `json:"appName"`
+	AppGUID            string            `json:"appGUID"`
+	OrgName            string            `json:"orgName"`
+	OrgGUID            string            `json:"orgGUID"`
+	SpaceName          string            `json:"spaceName"`
+	SpaceGUID          string            `json:"spaceGUID"`
+	MemoryMB           int64             `json:"memoryMB"`
+	DiskMB             int64             `json:"diskMB"`
+	CPUWeight          uint8             `json:"cpuWeight"`
 }
 
 type StagingTask struct {
