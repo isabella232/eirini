@@ -1,7 +1,10 @@
 package staging_reporter_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -21,16 +24,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("TaskReporter", func() {
+var _ = FDescribe("TaskReporter", func() {
 	var (
-		cloudControllerServer *ghttp.Server
-		handlers              []http.HandlerFunc
-		configFile            string
-		certPath              string
-		keyPath               string
-		session               *gexec.Session
-		taskDesirer           k8s.TaskDesirer
-		task                  *opi.Task
+		cloudControllerServer  *ghttp.Server
+		configFile             string
+		certPath               string
+		keyPath                string
+		session                *gexec.Session
+		taskDesirer            k8s.TaskDesirer
+		task                   *opi.Task
+		completionCallbackPath string
 	)
 
 	BeforeEach(func() {
@@ -39,12 +42,24 @@ var _ = Describe("TaskReporter", func() {
 		var err error
 		cloudControllerServer, err = util.CreateTestServer(certPath, keyPath, certPath)
 		Expect(err).ToNot(HaveOccurred())
-		cloudControllerServer.Start()
+		completionCallbackPath = "/" + util.Guidify("the-callback")
+		cloudControllerServer.Reset()
+		// cloudControllerServer.RouteToHandler("POST", completionCallbackPath, ghttp.RespondWith(200, nil))
+		cloudControllerServer.RouteToHandler("POST", completionCallbackPath, func(w http.ResponseWriter, r *http.Request) {
+			fmt.Printf("=============> handler got request %s\n", prettyPrintRequest(r))
+			bodyContent, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				w.WriteHeader(503)
+				return
+			}
+			r.Body.Close()
 
-		handlers = []http.HandlerFunc{
-			ghttp.VerifyRequest("POST", "/the-callback"),
-			ghttp.VerifyJSONRepresenting(cf.TaskCompletedRequest{TaskGUID: "the-task-guid"}),
-		}
+			r.Body = cachingReadCloser{cache: bodyContent}
+
+			w.WriteHeader(200)
+		})
+		// cloudControllerServer.SetAllowUnhandledRequests(true)
+		cloudControllerServer.Start()
 
 		config := &eirini.TaskReporterConfig{
 			KubeConfig: eirini.KubeConfig{
@@ -70,7 +85,7 @@ var _ = Describe("TaskReporter", func() {
 			Image:              "busybox",
 			Command:            []string{"echo", "hi"},
 			GUID:               util.Guidify("the-task-guid"),
-			CompletionCallback: fmt.Sprintf("%s/the-callback", cloudControllerServer.URL()),
+			CompletionCallback: fmt.Sprintf("%s%s", cloudControllerServer.URL(), completionCallbackPath),
 			AppName:            "app",
 			AppGUID:            "app-guid",
 			OrgName:            "org-name",
@@ -84,10 +99,6 @@ var _ = Describe("TaskReporter", func() {
 	})
 
 	JustBeforeEach(func() {
-		cloudControllerServer.AppendHandlers(
-			ghttp.CombineHandlers(handlers...),
-		)
-
 		Expect(taskDesirer.Desire(fixture.Namespace, task)).To(Succeed())
 	})
 
@@ -101,9 +112,21 @@ var _ = Describe("TaskReporter", func() {
 		cloudControllerServer.Close()
 	})
 
-	It("notifies the cloud controller of a task completion", func() {
-		Eventually(cloudControllerServer.ReceivedRequests, "1m").Should(HaveLen(1))
-		Consistently(cloudControllerServer.ReceivedRequests, "1m").Should(HaveLen(1))
+	FIt("notifies the cloud controller of a task completion", func() {
+		Eventually(cloudControllerServer.ReceivedRequests, "10s").Should(ContainElement(SatisfyAll(
+			MatchRequestMethod("POST"),
+			MatchRequestPath(completionCallbackPath),
+		)))
+
+		Expect(cloudControllerServer.ReceivedRequests()).To(ContainElement(SatisfyAll(
+			MatchRequestMethod("POST"),
+			MatchRequestPath(completionCallbackPath),
+			MatchJSONBody(
+				cf.TaskCompletedRequest{
+					TaskGUID: task.GUID,
+				},
+			),
+		)))
 	})
 
 	It("deletes the job", func() {
@@ -114,20 +137,25 @@ var _ = Describe("TaskReporter", func() {
 		BeforeEach(func() {
 			task.GUID = util.Guidify("failing-task-guid")
 			task.Command = []string{"false"}
-
-			handlers = []http.HandlerFunc{
-				ghttp.VerifyRequest("POST", "/the-callback"),
-				ghttp.VerifyJSONRepresenting(cf.TaskCompletedRequest{
-					TaskGUID:      "failing-task-guid",
-					Failed:        true,
-					FailureReason: "Error",
-				}),
-			}
 		})
 
 		It("notifies the cloud controller of a task failure", func() {
-			Eventually(cloudControllerServer.ReceivedRequests, "10s").Should(HaveLen(1))
-			Consistently(cloudControllerServer.ReceivedRequests, "10s").Should(HaveLen(1))
+			Eventually(cloudControllerServer.ReceivedRequests, "10s").Should(ContainElement(SatisfyAll(
+				MatchRequestMethod("POST"),
+				MatchRequestPath(completionCallbackPath),
+			)))
+
+			Expect(cloudControllerServer.ReceivedRequests()).To(ContainElement(SatisfyAll(
+				MatchRequestMethod("POST"),
+				MatchRequestPath(completionCallbackPath),
+				MatchJSONBody(
+					cf.TaskCompletedRequest{
+						TaskGUID:      task.GUID,
+						Failed:        true,
+						FailureReason: "Error",
+					},
+				),
+			)))
 		})
 
 		It("deletes the job", func() {
@@ -177,4 +205,112 @@ func getTaskJobsFn(guid string) func() ([]batchv1.Job, error) {
 		})
 		return jobs.Items, err
 	}
+}
+
+type requestMethodMatcher struct {
+	method string
+}
+
+func MatchRequestMethod(method string) *requestMethodMatcher {
+	return &requestMethodMatcher{method: method}
+}
+
+func (m *requestMethodMatcher) Match(actual interface{}) (bool, error) {
+	request, ok := actual.(*http.Request)
+	if !ok {
+		return false, fmt.Errorf("MatchRequestVerb expects an http.Request")
+	}
+
+	return request.Method == m.method, nil
+}
+
+func (m *requestMethodMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("expected %s to have method %q", prettyPrintRequest(actual), m.method)
+}
+
+func (m *requestMethodMatcher) NegatedFailureMessage(actual interface{}) string {
+	return fmt.Sprintf("expected %s not to have method %q", prettyPrintRequest(actual), m.method)
+}
+
+type requestPathMatcher struct {
+	path string
+}
+
+func MatchRequestPath(path string) *requestPathMatcher {
+	return &requestPathMatcher{path: path}
+}
+
+func (m *requestPathMatcher) Match(actual interface{}) (bool, error) {
+	request, ok := actual.(*http.Request)
+	if !ok {
+		return false, fmt.Errorf("MatchRequestPath expects an http.Request")
+	}
+
+	return request.URL.Path == m.path, nil
+}
+
+func (m *requestPathMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("expected %s to have path %q", prettyPrintRequest(actual), m.path)
+}
+
+func (m *requestPathMatcher) NegatedFailureMessage(actual interface{}) string {
+	return fmt.Sprintf("expected %s not to have path %q", prettyPrintRequest(actual), m.path)
+}
+
+type requestJSONBodyMatcher struct {
+	body interface{}
+}
+
+func MatchJSONBody(body interface{}) *requestJSONBodyMatcher {
+	return &requestJSONBodyMatcher{body: body}
+}
+
+func (m *requestJSONBodyMatcher) Match(actual interface{}) (bool, error) {
+	request, ok := actual.(*http.Request)
+	if !ok {
+		return false, fmt.Errorf("MatchPathVerb expects an http.Request")
+	}
+
+	fmt.Printf("======> reading body for request %s\n", prettyPrintRequest(request))
+
+	requestBytes, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to read request body: %w", err)
+	}
+	defer request.Body.Close()
+
+	expectedBytes, err := json.Marshal(m.body)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal ")
+	}
+
+	return MatchJSON(expectedBytes).Match(requestBytes)
+}
+
+func (m *requestJSONBodyMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("expected %s to have body %v", prettyPrintRequest(actual), m.body)
+}
+
+func (m *requestJSONBodyMatcher) NegatedFailureMessage(actual interface{}) string {
+	return fmt.Sprintf("expected %s not to have body %v", prettyPrintRequest(actual), m.body)
+}
+
+func prettyPrintRequest(actual interface{}) string {
+	request, ok := actual.(*http.Request)
+	if !ok {
+		return "prettyPrintRequest expects an http.Request"
+	}
+	return fmt.Sprintf("/%s %s", request.Method, request.URL.Path)
+}
+
+type cachingReadCloser struct {
+	cache []byte
+}
+
+func (p cachingReadCloser) Read(buf []byte) (n int, err error) {
+	return bytes.NewBuffer(p.cache).Read(buf)
+}
+
+func (p cachingReadCloser) Close() error {
+	return nil
 }
