@@ -11,6 +11,7 @@ import (
 	cmdcommons "code.cloudfoundry.org/eirini/cmd"
 	"code.cloudfoundry.org/eirini/k8s"
 	"code.cloudfoundry.org/eirini/k8s/client"
+	eirinievent "code.cloudfoundry.org/eirini/k8s/informers/event"
 	"code.cloudfoundry.org/eirini/k8s/reconciler"
 	eirinischeme "code.cloudfoundry.org/eirini/pkg/generated/clientset/versioned/scheme"
 	"code.cloudfoundry.org/lager"
@@ -61,15 +62,17 @@ func main() {
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	cmdcommons.ExitIfError(err)
 
-	logger := lager.NewLogger("eirini-informer")
+	logger := lager.NewLogger("eirini-controller")
 	logger.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
 
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Scheme: eirinischeme.Scheme,
+		MetricsBindAddress: "0",
+		Scheme:             eirinischeme.Scheme,
 	})
 	cmdcommons.ExitIfError(err)
-	lrpReconciler := createLRPReconciler(logger.Session("lrp-reconciler"), controllerClient, clientset, eiriniCfg, mgr.GetScheme())
-	taskReconciler := createTaskReconciler(logger.Session("task-reconciler"), controllerClient, clientset, eiriniCfg, mgr.GetScheme())
+	lrpReconciler := createLRPReconciler(logger, controllerClient, clientset, eiriniCfg, mgr.GetScheme())
+	taskReconciler := createTaskReconciler(logger, controllerClient, clientset, eiriniCfg, mgr.GetScheme())
+	podCrashReconciler := createPodCrashReconciler(logger, controllerClient, clientset)
 
 	err = builder.
 		ControllerManagedBy(mgr).
@@ -89,7 +92,7 @@ func main() {
 	err = builder.
 		ControllerManagedBy(mgr).
 		For(&corev1.Pod{}, builder.WithPredicates(predicates...)).
-		Complete(podCrashReconciler{client: controllerClient})
+		Complete(podCrashReconciler)
 	cmdcommons.ExitIfError(err)
 
 	err = mgr.Start(ctrl.SetupSignalHandler())
@@ -120,7 +123,6 @@ func (p labelPredicate) Delete(event.DeleteEvent) bool {
 func (p labelPredicate) Update(e event.UpdateEvent) bool {
 	labels := e.MetaNew.GetLabels()
 	sourceType := labels[k8s.LabelSourceType]
-	fmt.Printf("sourceType was %q\n", sourceType)
 	return sourceType == "APP"
 }
 func (p labelPredicate) Generic(event.GenericEvent) bool {
@@ -155,7 +157,7 @@ func createLRPReconciler(
 		RootfsVersion:                     eiriniCfg.Properties.RootfsVersion,
 		LivenessProbeCreator:              k8s.CreateLivenessProbe,
 		ReadinessProbeCreator:             k8s.CreateReadinessProbe,
-		Logger:                            logger,
+		Logger:                            logger.Session("stateful-set-desirer"),
 		ApplicationServiceAccount:         eiriniCfg.Properties.ApplicationServiceAccount,
 		AllowAutomountServiceAccountToken: eiriniCfg.Properties.UnsafeAllowAutomountServiceAccountToken,
 	}
@@ -182,4 +184,15 @@ func createTaskReconciler(
 	)
 
 	return reconciler.NewTask(logger, controllerClient, taskDesirer, scheme)
+}
+
+func createPodCrashReconciler(
+	logger lager.Logger,
+	controllerClient runtimeclient.Client,
+	clientset kubernetes.Interface) *reconciler.PodCrash {
+
+	eventsClient := client.NewEvent(clientset)
+	statefulSetClient := client.NewStatefulSet(clientset)
+	crashEventGenerator := eirinievent.NewDefaultCrashEventGenerator(eventsClient)
+	return reconciler.NewPodCrash(logger, controllerClient, crashEventGenerator, eventsClient, statefulSetClient)
 }

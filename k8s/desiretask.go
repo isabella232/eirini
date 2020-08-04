@@ -69,7 +69,7 @@ func NewTaskDesirer(
 	rootfsVersion string,
 ) *TaskDesirer {
 	return &TaskDesirer{
-		logger:                    logger,
+		logger:                    logger.Session("task-desirer"),
 		jobCreator:                jobClient,
 		secretsCreator:            secretsCreator,
 		defaultStagingNamespace:   defaultStagingNamespace,
