@@ -148,7 +148,7 @@ var _ = Describe("K8s/Reconciler/AppCrash", func() {
 			Expect(eventsClient.CreateCallCount()).To(Equal(1))
 			namespace, event := eventsClient.CreateArgsForCall(0)
 			Expect(namespace).To(Equal("some-ns"))
-			Expect(event.GenerateName).To(Equal("instance-name"))
+			Expect(event.GenerateName).To(Equal("instance-name-"))
 			Expect(event.Labels).To(HaveKeyWithValue("cloudfoundry.org/instance_index", "3"))
 			Expect(event.Annotations).To(HaveKeyWithValue("cloudfoundry.org/process_guid", "process-guid"))
 

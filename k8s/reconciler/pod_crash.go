@@ -155,7 +155,7 @@ func (r PodCrash) makeEvent(crashEvent events.CrashEvent, namespace string, invo
 	return &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace,
-			GenerateName: crashEvent.Instance,
+			GenerateName: fmt.Sprintf("%s-", crashEvent.Instance),
 			Labels: map[string]string{
 				labelInstanceIndex: strconv.Itoa(crashEvent.Index),
 			},

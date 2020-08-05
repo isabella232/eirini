@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,10 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type options struct {
@@ -88,7 +84,7 @@ func main() {
 		Complete(taskReconciler)
 	cmdcommons.ExitIfError(err)
 
-	predicates := []predicate.Predicate{labelPredicate{}}
+	predicates := []predicate.Predicate{reconciler.NewSourceTypeUpdatePredicate("APP")}
 	err = builder.
 		ControllerManagedBy(mgr).
 		For(&corev1.Pod{}, builder.WithPredicates(predicates...)).
@@ -97,36 +93,6 @@ func main() {
 
 	err = mgr.Start(ctrl.SetupSignalHandler())
 	cmdcommons.ExitIfError(err)
-}
-
-type podCrashReconciler struct {
-	client runtimeclient.Client
-}
-
-func (r podCrashReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	pod := &corev1.Pod{}
-	r.client.Get(context.TODO(), request.NamespacedName, pod)
-	fmt.Printf("Pod Reconciler: %s / %s - %+v\n", request.Namespace, request.Name, pod)
-	return reconcile.Result{}, nil
-}
-
-type labelPredicate struct{}
-
-// Create returns true if the Create event should be processed
-func (p labelPredicate) Create(event.CreateEvent) bool {
-	return false
-}
-
-func (p labelPredicate) Delete(event.DeleteEvent) bool {
-	return false
-}
-func (p labelPredicate) Update(e event.UpdateEvent) bool {
-	labels := e.MetaNew.GetLabels()
-	sourceType := labels[k8s.LabelSourceType]
-	return sourceType == "APP"
-}
-func (p labelPredicate) Generic(event.GenericEvent) bool {
-	return false
 }
 
 func readConfigFile(path string) (*eirini.Config, error) {

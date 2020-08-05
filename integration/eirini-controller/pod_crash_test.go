@@ -66,7 +66,7 @@ var _ = Describe("PodCrash", func() {
 					CPUWeight: 10,
 					Instances: 1,
 					AppRoutes: []eiriniv1.Route{{Hostname: "app-hostname-1", Port: 8080}},
-					Command:   []string{"sh", "-c", `sleep 0.5; exit 3`},
+					Command:   []string{"sh", "-c", `sleep 1; exit 3`},
 				},
 			}
 
@@ -88,7 +88,7 @@ var _ = Describe("PodCrash", func() {
 				events = eventList.Items
 				return len(events)
 			}
-			Eventually(getEvents, "20s").Should(BeNumerically(">", 0))
+			Eventually(getEvents, "10s", "1ms").Should(BeNumerically(">", 0))
 
 			crash := events[0]
 			Expect(crash.Name).To(HavePrefix("k-2so"))
@@ -130,7 +130,7 @@ var _ = Describe("PodCrash", func() {
 				Expect(err).NotTo(HaveOccurred())
 				return eventList.Items
 			}
-			Eventually(getEvents, "20s").Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+			Eventually(getEvents, "40s").Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Reason": HavePrefix("Container: Error"),
 				"Count":  BeNumerically(">", 1),
 			})))
