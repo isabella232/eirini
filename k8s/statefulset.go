@@ -56,6 +56,8 @@ const (
 
 	LabelStagingGUID = "cloudfoundry.org/staging_guid"
 
+	OPIContainerName = "opi"
+
 	VcapUID                  = 2000
 	PdbMinAvailableInstances = 1
 	PodAffinityTermWeight    = 100
@@ -170,10 +172,10 @@ func (m *StatefulSetDesirer) Desire(namespace string, lrp *opi.LRP, opts ...Desi
 
 func (m *StatefulSetDesirer) List() ([]*opi.LRP, error) {
 	logger := m.Logger.Session("list")
+
 	statefulsets, err := m.StatefulSets.List(metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", LabelSourceType, appSourceType),
 	})
-
 	if err != nil {
 		logger.Error("failed-to-list-statefulsets", err)
 
@@ -291,8 +293,8 @@ func (m *StatefulSetDesirer) Update(lrp *opi.LRP) error {
 
 func (m *StatefulSetDesirer) update(lrp *opi.LRP) error {
 	logger := m.Logger.Session("update", lager.Data{"guid": lrp.GUID, "version": lrp.Version})
-	statefulSet, err := m.getStatefulSet(opi.LRPIdentifier{GUID: lrp.GUID, Version: lrp.Version})
 
+	statefulSet, err := m.getStatefulSet(opi.LRPIdentifier{GUID: lrp.GUID, Version: lrp.Version})
 	if err != nil {
 		logger.Error("failed-to-get-statefulset", err)
 
@@ -300,7 +302,6 @@ func (m *StatefulSetDesirer) update(lrp *opi.LRP) error {
 	}
 
 	uris, err := json.Marshal(lrp.AppURIs)
-
 	if err != nil {
 		panic("failed to marshal routes")
 	}
@@ -596,7 +597,7 @@ func (m *StatefulSetDesirer) toStatefulSet(lrp *opi.LRP) *appsv1.StatefulSet { /
 					ImagePullSecrets: m.calculateImagePullSecrets(lrp),
 					Containers: []corev1.Container{
 						{
-							Name:            "opi",
+							Name:            OPIContainerName,
 							Image:           lrp.Image,
 							ImagePullPolicy: corev1.PullAlways,
 							Command:         lrp.Command,
