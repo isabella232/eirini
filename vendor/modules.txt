@@ -6,8 +6,9 @@ code.cloudfoundry.org/bbs/format
 code.cloudfoundry.org/bbs/models
 # code.cloudfoundry.org/cfhttp/v2 v2.0.0
 code.cloudfoundry.org/cfhttp/v2
-# code.cloudfoundry.org/eirinix v0.0.0-00010101000000-000000000000 => ../eirinix
+# code.cloudfoundry.org/eirinix v0.3.1-0.20200813115927-6a0925613552
 code.cloudfoundry.org/eirinix
+code.cloudfoundry.org/eirinix/util/ctxlog
 # code.cloudfoundry.org/go-diodes v0.0.0-20190809170250-f77fb823c7ee
 code.cloudfoundry.org/go-diodes
 # code.cloudfoundry.org/go-loggregator v7.4.0+incompatible
@@ -54,8 +55,6 @@ github.com/Microsoft/go-winio/pkg/guid
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/SUSE/eirinix v0.3.0
-github.com/SUSE/eirinix/util/ctxlog
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.1.1

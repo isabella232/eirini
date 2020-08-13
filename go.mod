@@ -3,7 +3,6 @@ module code.cloudfoundry.org/eirini
 go 1.13
 
 replace (
-	code.cloudfoundry.org/eirinix => ../eirinix
 	github.com/go-logr/logr => github.com/go-logr/logr v0.1.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.0
 	k8s.io/client-go => k8s.io/client-go v0.18.6
@@ -18,7 +17,7 @@ require (
 	code.cloudfoundry.org/clock v0.0.0-20180518195852-02e53af36e6c // indirect
 	code.cloudfoundry.org/consuladapter v0.0.0-20190222031846-a0ec466a22b6 // indirect
 	code.cloudfoundry.org/diego-logging-client v0.0.0-20190918155030-cd01d2d2c629 // indirect
-	code.cloudfoundry.org/eirinix v0.0.0-00010101000000-000000000000
+	code.cloudfoundry.org/eirinix v0.3.1-0.20200813115927-6a0925613552
 	code.cloudfoundry.org/executor v0.0.0-20191210222949-67a08c48e56c // indirect
 	code.cloudfoundry.org/garden v0.0.0-20191128141255-60b076cc4749 // indirect
 	code.cloudfoundry.org/go-diodes v0.0.0-20190809170250-f77fb823c7ee // indirect
@@ -32,7 +31,6 @@ require (
 	code.cloudfoundry.org/tps v0.0.0-20190724214151-ce1ef3913d8e
 	code.cloudfoundry.org/urljoiner v0.0.0-20170223060717-5cabba6c0a50 // indirect
 	github.com/Azure/go-autorest/autorest v0.11.2 // indirect
-	github.com/SUSE/eirinix v0.3.0 // indirect
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/containers/image v3.0.2+incompatible
 	github.com/containers/storage v1.16.0 // indirect
