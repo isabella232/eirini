@@ -24,7 +24,7 @@ import (
 var fixture *util.Fixture
 
 var _ = BeforeSuite(func() {
-	fixture = util.NewFixture(GinkgoWriter)
+	fixture = util.NewFixture(util.GetKubeconfig(), GinkgoWriter)
 })
 
 var _ = BeforeEach(func() {

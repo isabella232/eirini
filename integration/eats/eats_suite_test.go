@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -47,6 +48,7 @@ var (
 	opiSession                          *gexec.Session
 	httpClient                          *http.Client
 	opiURL                              string
+	tmpKubeConfigPath                   string
 )
 
 var _ = SynchronizedBeforeSuite(func() []byte {
@@ -65,12 +67,24 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	err := json.Unmarshal(data, &eiriniBins)
 	Expect(err).NotTo(HaveOccurred())
 
-	fixture = util.NewFixture(GinkgoWriter)
+	tmpKubeConfig, err := ioutil.TempFile("", "kube.cfg")
+	Expect(err).NotTo(HaveOccurred())
+	defer tmpKubeConfig.Close()
+
+	kubeConfigContents, err := os.Open(util.GetKubeconfig())
+	Expect(err).NotTo(HaveOccurred())
+	defer kubeConfigContents.Close()
+	_, err := io.Copy(tmpKubeConfig, kubeConfigContents)
+	Expect(err).NotTo(HaveOccurred())
+
+	tmpKubeConfigPath = tmpKubeConfig.Name()
+	fixture = util.NewFixture(tmpKubeConfigPath, GinkgoWriter)
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
 	eiriniBins.TearDown()
 	Expect(os.RemoveAll(binsPath)).To(Succeed())
+	Expect(os.RemoveAll(tmpKubeConfigPath)).To(Succeed())
 })
 
 var _ = BeforeEach(func() {

@@ -35,7 +35,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	err := json.Unmarshal(data, &eiriniBins)
 	Expect(err).NotTo(HaveOccurred())
 
-	fixture = util.NewFixture(GinkgoWriter)
+	fixture = util.NewFixture(util.GetKubeconfig(), GinkgoWriter)
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {

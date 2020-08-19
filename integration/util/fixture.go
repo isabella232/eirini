@@ -43,9 +43,7 @@ type Fixture struct {
 	extraNamespaces   []string
 }
 
-func NewFixture(writer io.Writer) *Fixture {
-	kubeConfigPath := GetKubeconfig()
-
+func NewFixture(kubeConfigPath string, writer io.Writer) *Fixture {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	Expect(err).NotTo(HaveOccurred(), "failed to build config from flags")
 
