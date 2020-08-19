@@ -1,14 +1,11 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/yaml.v2"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const DefaultApplicationServiceAccount = "eirini"
@@ -28,14 +25,9 @@ func GetKubeconfig() string {
 
 	_, err = os.Stat(kubeconfPath)
 	if os.IsNotExist(err) {
-		kubeconf, err := clientcmd.BuildConfigFromFlags("", "")
-		Expect(err).NotTo(HaveOccurred())
-		kubeConfBytes, err := yaml.Marshal(kubeconf)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(kubeconfPath, kubeConfBytes, 0o755)).To(Succeed())
-	} else {
-		Expect(err).NotTo(HaveOccurred())
+		return ""
 	}
+	Expect(err).NotTo(HaveOccurred())
 
 	return kubeconfPath
 }

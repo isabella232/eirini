@@ -5,6 +5,7 @@ metadata:
 spec:
   template:
     spec:
+      serviceAccountName: test-job
       containers:
       - command:
         - /bin/bash
@@ -20,10 +21,13 @@ spec:
         - /bin/bash
         - -c
         - |
+
+            time (
             while ! [ -f /eirini-code/tests-can-start ];do
                 echo 'eirini code is missing'
                 sleep 0.5
             done
+            )
         image: eirini/ci
         name: wait-for-code
         volumeMounts:
