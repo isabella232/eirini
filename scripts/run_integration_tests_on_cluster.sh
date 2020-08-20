@@ -4,6 +4,8 @@
 # - Generate random suffix for job name
 # - Implement a cleanup method
 # - Cleanup by default but skip if a flag is set (for debugging)
+# - Use a pod instead of a job? https://github.com/kubernetes/kubernetes/issues/20255
+# - Don't copy .git with kubectl cp
 
 set -euo pipefail
 
@@ -22,7 +24,10 @@ is_init_container_running() {
 
 # Cleanup possible leftovers
 kubectl delete job eirini-integration-tests --wait --ignore-not-found
-kubectl delete pod --wait $(kubectl get pods | grep eirini-integration-tests | awk '{print $1}')
+existing_pods=$(kubectl get pods --all-namespaces --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' | awk '$1 ~ /eirini-integration-tests/ { printf "%s ",$1 }')
+if [[ ! "$existing_pods" == "" ]]; then
+  kubectl delete pod --ignore-not-found --wait ${existing_pods}
+fi
 kubectl apply -f "$BASEDIR"/scripts/assets/test-job-rbac.yml
 goml set -d -f "$BASEDIR"/scripts/assets/test-job.yml -p spec.template.spec.containers.0.env.name:EIRINIUSER_PASSWORD.value -v "$EIRINIUSER_PASSWORD" | kubectl apply -f -
 
@@ -30,7 +35,7 @@ pod_name=$(kubectl get pods --selector=job-name=eirini-integration-tests --templ
 timeout=30
 while [[ $pod_name == "" ]] && [[ ! "$timeout" == "0" ]]; do
   sleep 1
-  pod_name=$(kubectl get pods --selector=job-name=eirini-integration-tests)
+  pod_name=$(kubectl get pods --selector=job-name=eirini-integration-tests --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')
   timeout=$((timeout - 1))
 done
 if [[ "${timeout}" == 0 ]]; then
