@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 
 	"code.cloudfoundry.org/eirini"
 	"code.cloudfoundry.org/eirini/k8s"
@@ -109,6 +110,8 @@ func (r *LRP) do(lrp *eiriniv1.LRP) error {
 
 	err = r.updateStatus(lrp, appLRP)
 	errs = multierror.Append(errs, errors.Wrap(err, "failed to update lrp status"))
+
+	fmt.Printf("appLRP = %+v\n", appLRP)
 
 	err = r.desirer.Update(appLRP)
 	errs = multierror.Append(errs, errors.Wrap(err, "failed to update app"))

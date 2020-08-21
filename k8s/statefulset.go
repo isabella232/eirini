@@ -288,6 +288,8 @@ func (m *StatefulSetDesirer) Update(lrp *opi.LRP) error {
 }
 
 func (m *StatefulSetDesirer) update(lrp *opi.LRP) error {
+	fmt.Printf("lrp = %+v\n", lrp)
+
 	logger := m.Logger.Session("update", lager.Data{"guid": lrp.GUID, "version": lrp.Version})
 
 	statefulSet, err := m.getStatefulSet(opi.LRPIdentifier{GUID: lrp.GUID, Version: lrp.Version})
@@ -306,6 +308,12 @@ func (m *StatefulSetDesirer) update(lrp *opi.LRP) error {
 	statefulSet.Spec.Replicas = &count
 	statefulSet.Annotations[AnnotationLastUpdated] = lrp.LastUpdated
 	statefulSet.Annotations[AnnotationRegisteredRoutes] = string(uris)
+
+	for i, container := range statefulSet.Spec.Template.Spec.Containers {
+		if container.Name == OPIContainerName {
+			statefulSet.Spec.Template.Spec.Containers[i].Image = lrp.Image
+		}
+	}
 
 	_, err = m.StatefulSets.Update(statefulSet.Namespace, statefulSet)
 	if err != nil {

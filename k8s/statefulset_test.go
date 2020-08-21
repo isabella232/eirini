@@ -500,6 +500,14 @@ var _ = Describe("Statefulset Desirer", func() {
 					},
 					Spec: appsv1.StatefulSetSpec{
 						Replicas: &replicas,
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{Name: "another-container", Image: "another/image"},
+									{Name: k8s.OPIContainerName, Image: "old/image"},
+								},
+							},
+						},
 					},
 				},
 			}
@@ -512,6 +520,7 @@ var _ = Describe("Statefulset Desirer", func() {
 				TargetInstances: 5,
 				LastUpdated:     "now",
 				AppURIs:         []opi.Route{{Hostname: "new-route.io", Port: 6666}},
+				Image:           "new/image",
 			}
 
 			Expect(statefulSetDesirer.Update(lrp)).To(Succeed())
@@ -523,6 +532,8 @@ var _ = Describe("Statefulset Desirer", func() {
 			Expect(st.GetAnnotations()).To(HaveKeyWithValue(k8s.AnnotationRegisteredRoutes, `[{"hostname":"new-route.io","port":6666}]`))
 			Expect(st.GetAnnotations()).NotTo(HaveKey("another"))
 			Expect(*st.Spec.Replicas).To(Equal(int32(5)))
+			Expect(st.Spec.Template.Spec.Containers[0].Image).To(Equal("another/image"))
+			Expect(st.Spec.Template.Spec.Containers[1].Image).To(Equal("new/image"))
 		})
 
 		Context("when lrp is scaled down to 1 instance", func() {
