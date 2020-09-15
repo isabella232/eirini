@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"code.cloudfoundry.org/eirini/k8s"
+	"code.cloudfoundry.org/eirini/pkg/apis/eirini"
 	eiriniv1 "code.cloudfoundry.org/eirini/pkg/apis/eirini/v1"
 	"code.cloudfoundry.org/eirini/tests"
 	. "github.com/onsi/ginkgo"
@@ -12,6 +13,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var _ = Describe("Apps CRDs", func() {
@@ -21,6 +24,7 @@ var _ = Describe("Apps CRDs", func() {
 		namespace  string
 		lrpGUID    string
 		lrpVersion string
+		lrp        *eiriniv1.LRP
 	)
 
 	getStatefulSet := func() *appsv1.StatefulSet {
@@ -68,7 +72,7 @@ var _ = Describe("Apps CRDs", func() {
 		lrpGUID = tests.GenerateGUID()
 		lrpVersion = tests.GenerateGUID()
 
-		lrp := &eiriniv1.LRP{
+		lrp = &eiriniv1.LRP{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: lrpName,
 			},
@@ -93,14 +97,22 @@ var _ = Describe("Apps CRDs", func() {
 			},
 		}
 
-		_, err := fixture.EiriniClientset.
-			EiriniV1().
-			LRPs(namespace).
-			Create(context.Background(), lrp, metav1.CreateOptions{})
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("Desiring an app", func() {
+		var clientErr error
+
+		JustBeforeEach(func() {
+			_, clientErr = fixture.EiriniClientset.
+				EiriniV1().
+				LRPs(namespace).
+				Create(context.Background(), lrp, metav1.CreateOptions{})
+		})
+
+		It("succeeds", func() {
+			Expect(clientErr).NotTo(HaveOccurred())
+		})
+
 		It("deploys the app to the same namespace as the CRD", func() {
 			Eventually(getStatefulSet).ShouldNot(BeNil())
 			Eventually(func() bool {
@@ -124,24 +136,87 @@ var _ = Describe("Apps CRDs", func() {
 				return getLRP().Status.Replicas
 			}).Should(Equal(int32(1)))
 		})
+
+		When("the disk quota is not specified", func() {
+			It("fails", func() {
+				obj := &unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"kind":       "LRP",
+						"apiVersion": "eirini.cloudfoundry.org/v1",
+						"metadata": map[string]interface{}{
+							"name": "the-invalid-lrp",
+						},
+						"spec": map[string]interface{}{
+							"guid":      lrpGUID,
+							"version":   lrpVersion,
+							"image":     "eirini/dorini",
+							"appGUID":   "the-app-guid",
+							"appName":   "k-2so",
+							"spaceName": "s",
+							"orgName":   "o",
+							"env":       map[string]string{"FOO": "BAR"},
+							"instances": 1,
+							"appRoutes": []eiriniv1.Route{{Hostname: "app-hostname-1", Port: 8080}},
+						},
+					},
+				}
+				_, err := fixture.DynamicClientset.
+					Resource(schema.GroupVersionResource{
+						Group:    eirini.GroupName,
+						Version:  "v1",
+						Resource: "lrps",
+					}).
+					Namespace(namespace).
+					Create(context.Background(), obj, metav1.CreateOptions{})
+				Expect(err).To(MatchError(ContainSubstring("diskMB: Required value")))
+			})
+		})
+
+		When("the disk quota is 0", func() {
+			BeforeEach(func() {
+				lrp.Spec.DiskMB = 0
+			})
+
+			It("fails", func() {
+				Expect(clientErr).To(MatchError(ContainSubstring("spec.diskMB in body should be greater than or equal to 1")))
+			})
+		})
 	})
 
-	Describe("Update an app", func() {
-		When("routes are updated", func() {
-			BeforeEach(func() {
-				Eventually(func() int32 {
-					return getLRP().Status.Replicas
-				}).Should(Equal(int32(1)))
+	FDescribe("Update an app", func() {
+		var (
+			modifyLRP func(*eiriniv1.LRP)
+		)
 
+		BeforeEach(func() {
+			_, err := fixture.EiriniClientset.
+				EiriniV1().
+				LRPs(namespace).
+				Create(context.Background(), lrp, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() int32 {
+				return getLRP().Status.Replicas
+			}).Should(Equal(int32(1)))
+		})
+
+		JustBeforeEach(func() {
+			Eventually(func() error {
 				lrp := getLRP()
-				lrp.Spec.AppRoutes = []eiriniv1.Route{{Hostname: "app-hostname-1", Port: 8080}}
-
+				modifyLRP(lrp)
 				_, err := fixture.EiriniClientset.
 					EiriniV1().
 					LRPs(namespace).
 					Update(context.Background(), lrp, metav1.UpdateOptions{})
+				return err
+			}).Should(Succeed())
+		})
 
-				Expect(err).NotTo(HaveOccurred())
+		When("routes are updated", func() {
+			BeforeEach(func() {
+				modifyLRP = func(lrp *eiriniv1.LRP) {
+					lrp.Spec.AppRoutes = []eiriniv1.Route{{Hostname: "app-hostname-1", Port: 8080}}
+				}
 			})
 
 			It("updates the underlying statefulset", func() {
@@ -152,21 +227,10 @@ var _ = Describe("Apps CRDs", func() {
 		})
 
 		When("instance count is updated", func() {
-			updateLRP := func() error {
-				lrp := getLRP()
-				lrp.Spec.Instances = 3
-
-				_, err := fixture.EiriniClientset.
-					EiriniV1().
-					LRPs(namespace).
-					Update(context.Background(), lrp, metav1.UpdateOptions{})
-
-				return err
-			}
-
 			BeforeEach(func() {
-				Eventually(getStatefulSet).ShouldNot(BeNil())
-				Eventually(updateLRP).Should(Succeed())
+				modifyLRP = func(lrp *eiriniv1.LRP) {
+					lrp.Spec.Instances = 3
+				}
 			})
 
 			It("updates the underlying statefulset", func() {
@@ -176,7 +240,7 @@ var _ = Describe("Apps CRDs", func() {
 
 				Eventually(func() int32 {
 					return getLRP().Status.Replicas
-				}).Should(Equal(int32(3)))
+				}, "10m").Should(Equal(int32(3)))
 			})
 		})
 	})
