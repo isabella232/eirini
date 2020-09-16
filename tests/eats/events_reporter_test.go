@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("EventsReporter", func() {
+var _ = FDescribe("EventsReporter", func() {
 	var (
 		guid  string
 		image string
@@ -38,6 +38,7 @@ var _ = Describe("EventsReporter", func() {
 			GUID:         guid,
 			Version:      "1",
 			NumInstances: 1,
+			DiskMB:       512,
 			Lifecycle: cf.Lifecycle{
 				DockerLifecycle: &cf.DockerLifecycle{
 					Image: image,
