@@ -16,6 +16,9 @@ var _ = Describe("MetricsCollector", func() {
 		configFilePath string
 		session        *gexec.Session
 	)
+	BeforeEach(func() {
+		config = metricsCollectorConfig()
+	})
 
 	JustBeforeEach(func() {
 		session, configFilePath = eiriniBins.MetricsCollector.Run(config)
@@ -30,13 +33,7 @@ var _ = Describe("MetricsCollector", func() {
 		}
 	})
 
-	Context("When metrics-collector is executed with valid loggregator config", func() {
-		BeforeEach(func() {
-			config = metricsCollectorConfig()
-		})
-
-		It("should be able to start properly", func() {
-			Expect(session.Command.Process.Signal(syscall.Signal(0))).To(Succeed())
-		})
+	It("should be able to start properly", func() {
+		Expect(session.Command.Process.Signal(syscall.Signal(0))).To(Succeed())
 	})
 })

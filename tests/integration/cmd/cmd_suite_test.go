@@ -106,14 +106,14 @@ func defaultEventReporterConfig() *eirini.EventReporterConfig {
 	return config
 }
 
-func defaultReporterConfig() *eirini.TaskReporterConfig {
-	config := &eirini.TaskReporterConfig{
+func defaultStagingReporterConfig() *eirini.StagingReporterConfig {
+	config := &eirini.StagingReporterConfig{
 		KubeConfig: eirini.KubeConfig{
 			ConfigPath: pathToTestFixture("kube.conf"),
 		},
-		CCCertPath: pathToTestFixture("cert"),
-		CCKeyPath:  pathToTestFixture("key"),
-		CAPath:     pathToTestFixture("cert"),
+		EiriniCertPath: pathToTestFixture("cert"),
+		EiriniKeyPath:  pathToTestFixture("key"),
+		CAPath:         pathToTestFixture("cert"),
 	}
 
 	return config

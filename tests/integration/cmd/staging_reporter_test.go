@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("StagingReporter", func() {
 	var (
-		config         *eirini.TaskReporterConfig
+		config         *eirini.StagingReporterConfig
 		configFilePath string
 		session        *gexec.Session
 	)
@@ -32,11 +32,14 @@ var _ = Describe("StagingReporter", func() {
 
 	Context("When staging reporter is executed with a valid config", func() {
 		BeforeEach(func() {
-			config = defaultReporterConfig()
+			config = defaultStagingReporterConfig()
 		})
 
-		It("should be able to start properly", func() {
+		FIt("should be able to start properly", func() {
 			Expect(session.Command.Process.Signal(syscall.Signal(0))).To(Succeed())
+			Consistently(func() error {
+				return session.Command.Process.Signal(syscall.Signal(0))
+			}, "5s", "1s").Should(Succeed())
 		})
 	})
 })

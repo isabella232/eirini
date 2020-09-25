@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/eirini/tests"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	. "github.com/onsi/gomega/gstruct"
 )
@@ -102,6 +103,7 @@ var _ = Describe("connect command", func() {
 		Context("when sending a request with a valid client certificate", func() {
 			It("should successfully connect", func() {
 				Eventually(getRootError, "10s").Should(Succeed())
+				// Consistently(getRootError, "2s", "500m").Should(Succeed())
 
 				Expect(getRoot()).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"TLS": PointTo(MatchFields(IgnoreExtras, Fields{
@@ -112,19 +114,24 @@ var _ = Describe("connect command", func() {
 		})
 	})
 
-	Context("invoke connect command with non-existent config", func() {
+	Context("invoke connect command with an empty config", func() {
+		BeforeEach(func() {
+			config = nil
+		})
+
 		It("fails", func() {
 			Eventually(session, "10s").Should(gexec.Exit())
 			Expect(session.ExitCode()).NotTo(BeZero())
+			Expect(session.Err).To(gbytes.Say("invalid configuration: no configuration has been provided"))
 		})
 	})
 
-	Context("invoke connect command without TLS config", func() {
+	Context("invoke connect command with non-existent TLS certs", func() {
 		BeforeEach(func() {
 			config = tests.DefaultEiriniConfig("test-ns", fixture.NextAvailablePort())
-			config.Properties.ClientCAPath = ""
-			config.Properties.ServerCertPath = ""
-			config.Properties.ServerKeyPath = ""
+			config.Properties.ClientCAPath = "/does/not/exist"
+			config.Properties.ServerCertPath = "/does/not/exist"
+			config.Properties.ServerKeyPath = "/does/not/exist"
 
 			configFile, err := tests.CreateConfigFile(config)
 			Expect(err).ToNot(HaveOccurred())
@@ -134,14 +141,12 @@ var _ = Describe("connect command", func() {
 		It("fails", func() {
 			Eventually(session, "10s").Should(gexec.Exit())
 			Expect(session.ExitCode()).NotTo(BeZero())
+			Expect(session.Err).To(gbytes.Say("failed to read certificate\\(s\\) at path \"/does/not/exist\""))
 		})
 
 		Context("eirini is configured to serve plaintext", func() {
 			BeforeEach(func() {
 				config = tests.DefaultEiriniConfig("test-ns", fixture.NextAvailablePort())
-				config.Properties.ClientCAPath = ""
-				config.Properties.ServerCertPath = ""
-				config.Properties.ServerKeyPath = ""
 				config.Properties.ServePlaintext = true
 				config.Properties.PlaintextPort = fixture.NextAvailablePort()
 
