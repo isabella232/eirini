@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -eu
+
+cat "$HOME"/workspace/eirini-release/deploy/**/namespace.yml | kubectl apply -f -
+
+cluster_ip="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')"
+"$HOME/workspace/eirini-release/deploy/scripts/generate_eirini_tls.sh" "$cluster_ip"
+
+skaffold $@

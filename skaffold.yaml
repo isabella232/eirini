@@ -1,0 +1,16 @@
+apiVersion: skaffold/v2beta7
+kind: Config
+metadata:
+  name: eirini
+build:
+  artifacts:
+  - image: eirini/opi
+    custom:
+      buildCommand: ./scripts/build opi
+      dependencies:
+        command: ./scripts/deps opi
+deploy:
+  kubectl:
+    manifests:
+    - ../eirini-release/deploy/core/*.yml
+    - ../eirini-release/deploy/workloads/*.yml
