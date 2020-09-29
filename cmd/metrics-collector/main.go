@@ -39,9 +39,9 @@ func main() {
 
 	verifyCertFilesExist(cfg)
 	tlsConfig, err := loggregator.NewIngressTLSConfig(
-		cfg.LoggregatorCAPath,
-		cfg.LoggregatorCertPath,
-		cfg.LoggregatorKeyPath,
+		cmdcommons.GetOrDefault(cfg.LoggregatorCAPath, eirini.LoggregatorCAPath),
+		cmdcommons.GetOrDefault(cfg.LoggregatorCertPath, eirini.LoggregatorCrtPath),
+		cmdcommons.GetOrDefault(cfg.LoggregatorKeyPath, eirini.LoggregatorKeyPath),
 	)
 	cmdcommons.ExitfIfError(err, "Failed to create loggregator tls config")
 
