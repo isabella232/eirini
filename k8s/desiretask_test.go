@@ -583,6 +583,7 @@ var _ = Describe("TaskDesirer", func() {
 			Entry("AnnotationOrgGUID", AnnotationOrgGUID, "org-id"),
 			Entry("AnnotationSpaceName", AnnotationSpaceName, "my-space"),
 			Entry("AnnotationSpaceGUID", AnnotationSpaceGUID, "space-id"),
+			Entry("AnnotationInjectIstio", AnnotationInjectIstio, "false"),
 			Entry("SeccompPodAnnotationKey", corev1.SeccompPodAnnotationKey, corev1.SeccompProfileRuntimeDefault),
 		)
 

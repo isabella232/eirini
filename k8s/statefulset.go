@@ -42,6 +42,7 @@ const (
 	AnnotationCompletionCallback   = "cloudfoundry.org/completion_callback"
 	AnnotationOpiTaskContainerName = "cloudfoundry.org/opi-task-container-name"
 	AnnotationGUID                 = "cloudfoundry.org/guid"
+	AnnotationInjectIstio          = "sidecar.istio.io/inject"
 
 	AnnotationStagingGUID = "cloudfoundry.org/staging_guid"
 

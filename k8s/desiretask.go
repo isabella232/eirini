@@ -447,6 +447,7 @@ func (d *TaskDesirer) toJob(task *opi.Task) *batch.Job {
 		AnnotationOrgGUID:              task.OrgGUID,
 		AnnotationSpaceName:            task.SpaceName,
 		AnnotationSpaceGUID:            task.SpaceGUID,
+		AnnotationInjectIstio:          "false",
 		corev1.SeccompPodAnnotationKey: corev1.SeccompProfileRuntimeDefault,
 	}
 
