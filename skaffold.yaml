@@ -9,13 +9,48 @@ build:
       buildCommand: ./scripts/build opi
       dependencies:
         command: ./scripts/deps opi
-deploy:
-  kubectl:
-    manifests:
-    - ../eirini-release/deploy/core/*.yml
-    - ../eirini-release/deploy/core/single-namespace/*.yml
-    - ../eirini-release/deploy/events/*.yml
-    - ../eirini-release/deploy/events/single-namespace/*.yml
-    - ../eirini-release/deploy/metrics/*.yml
-    - ../eirini-release/deploy/metrics/single-namespace/*.yml
-    - ../eirini-release/deploy/workloads/*.yml
+deploy: # deployment steps are defined in the profiles below
+profiles:
+- name: single-ns
+  deploy:
+    kubectl:
+      manifests:
+      - ../eirini-release/deploy/core/*.yml
+      - ../eirini-release/deploy/core/single-namespace/*.yml
+      - ../eirini-release/deploy/events/*.yml
+      - ../eirini-release/deploy/events/single-namespace/*.yml
+      - ../eirini-release/deploy/metrics/*.yml
+      - ../eirini-release/deploy/metrics/single-namespace/*.yml
+      - ../eirini-release/deploy/workloads/*.yml
+- name: multi-ns
+  deploy:
+    kubectl:
+      manifests:
+      - ../eirini-release/deploy/core/*.yml
+      - ../eirini-release/deploy/core/multi-namespace/*.yml
+      - ../eirini-release/deploy/events/*.yml
+      - ../eirini-release/deploy/events/multi-namespace/*.yml
+      - ../eirini-release/deploy/metrics/*.yml
+      - ../eirini-release/deploy/metrics/multi-namespace/*.yml
+      - ../eirini-release/deploy/workloads/*.yml
+- name: helm
+  deploy:
+    helm:
+      releases:
+      - name: nats
+        remote: true
+        chartPath: bitnami/nats
+        namespace: eirini-core
+        setValueTemplates:
+          auth.user: nats
+          auth.password: "{{.NATS_PASSWORD}}"
+      - name: eirini
+        chartPath: ../eirini-release/helm/eirini
+        namespace: eirini-core
+        valuesFiles:
+        - ../eirini-release/helm/scripts/assets/helm-values-template.yml
+        setValueTemplates:
+          kube.external_ips[0]: "{{.CLUSTER_IP}}"
+          opi.enable_multi_namespace_support: "{{.HELM_ENABLE_MULTI_NS}}"
+        # artifactOverrides:
+        #   opi.image: eirini/opi

@@ -1,10 +1,17 @@
 #!/bin/bash
 
-set -eu
+set -euo pipefail
 
 cat "$HOME"/workspace/eirini-release/deploy/**/namespace.yml | kubectl apply -f -
 
-cluster_ip="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')"
-"$HOME/workspace/eirini-release/deploy/scripts/generate_eirini_tls.sh" "$cluster_ip"
+export NATS_PASSWORD=$(pass eirini/ci/nats-password)
+export CLUSTER_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')"
+"$HOME/workspace/eirini-release/deploy/scripts/generate_eirini_tls.sh" "$CLUSTER_IP"
+eirini_certs_json=$(kubectl get -n eirini-core secret eirini-certs -o json)
+echo "$eirini_certs_json" | jq --arg pass "$(echo $NATS_PASSWORD | base64)" '.data["nats-password"]=$pass' | kubectl apply -f -
+
+kubectl apply -f "$HOME/workspace/eirini-ci/k8s-specs/tiller-service-account.yml"
+kubectl apply -f "$HOME/workspace/eirini-ci/k8s-specs/restricted-psp.yaml"
+helm init --service-account tiller --upgrade --wait
 
 skaffold $@
