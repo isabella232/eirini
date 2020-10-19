@@ -13,4 +13,9 @@ deploy:
   kubectl:
     manifests:
     - ../eirini-release/deploy/core/*.yml
+    - ../eirini-release/deploy/core/single-namespace/*.yml
+    - ../eirini-release/deploy/events/*.yml
+    - ../eirini-release/deploy/events/single-namespace/*.yml
+    - ../eirini-release/deploy/metrics/*.yml
+    - ../eirini-release/deploy/metrics/single-namespace/*.yml
     - ../eirini-release/deploy/workloads/*.yml
