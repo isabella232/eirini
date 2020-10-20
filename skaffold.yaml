@@ -9,7 +9,16 @@ build:
       buildCommand: ./scripts/build opi
       dependencies:
         command: ./scripts/deps opi
-deploy: # deployment steps are defined in the profiles below
+  - image: eirini/route-collector
+    custom:
+      buildCommand: ./scripts/build route-collector
+      dependencies:
+        command: ./scripts/deps route-collector
+# Deployment steps are defined in the profiles below. In order to
+# run a profile do ./scripts/skaffold run -p <profile-name>
+# The reason why there is no default deployment is that our deployment
+# differ way too much
+deploy:
 profiles:
 - name: single-ns
   deploy:
@@ -52,5 +61,6 @@ profiles:
         setValueTemplates:
           kube.external_ips[0]: "{{.CLUSTER_IP}}"
           opi.enable_multi_namespace_support: "{{.HELM_ENABLE_MULTI_NS}}"
-        # artifactOverrides:
-        #   opi.image: eirini/opi
+        artifactOverrides:
+          opi.image: eirini/opi
+          opi.route_collector_image: eirini/route-collector

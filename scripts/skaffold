@@ -2,16 +2,39 @@
 
 set -euo pipefail
 
-cat "$HOME"/workspace/eirini-release/deploy/**/namespace.yml | kubectl apply -f -
+trap revert_image_shas EXIT
 
+export SKAFFOLD_DEV_TAG=${SKAFFOLD_DEV_TAG:-please-work}
+export HELM_ENABLE_MULTI_NS=${HELM_ENABLE_MULTI_NS:-false}
 export NATS_PASSWORD=$(pass eirini/ci/nats-password)
 export CLUSTER_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')"
-"$HOME/workspace/eirini-release/deploy/scripts/generate_eirini_tls.sh" "$CLUSTER_IP"
-eirini_certs_json=$(kubectl get -n eirini-core secret eirini-certs -o json)
-echo "$eirini_certs_json" | jq --arg pass "$(echo $NATS_PASSWORD | base64)" '.data["nats-password"]=$pass' | kubectl apply -f -
 
-kubectl apply -f "$HOME/workspace/eirini-ci/k8s-specs/tiller-service-account.yml"
-kubectl apply -f "$HOME/workspace/eirini-ci/k8s-specs/restricted-psp.yaml"
-helm init --service-account tiller --upgrade --wait
+main() {
+  create_namespaces
+  generate_secret
+  skaffold $@
+}
 
-skaffold $@
+create_namespaces() {
+  cat "$HOME"/workspace/eirini-release/deploy/**/namespace.yml | kubectl apply -f -
+}
+
+generate_secret() {
+  "$HOME/workspace/eirini-release/deploy/scripts/generate_eirini_tls.sh" "$CLUSTER_IP"
+  eirini_certs_json=$(kubectl get -n eirini-core secret eirini-certs -o json)
+  echo "$eirini_certs_json" | jq --arg pass "$(echo $NATS_PASSWORD | base64)" '.data["nats-password"]=$pass' | kubectl apply -f -
+}
+
+init_helm() {
+  kubectl apply -f "$HOME/workspace/eirini-ci/k8s-specs/tiller-service-account.yml"
+  kubectl apply -f "$HOME/workspace/eirini-ci/k8s-specs/restricted-psp.yaml"
+  helm init --service-account tiller --upgrade --wait
+}
+
+revert_image_shas() {
+  for file in $(ls $HOME/workspace/eirini-release/helm/eirini/versions); do
+    sed -i -e "s|image: eirini/$file$|image: eirini/$file@$(cat $HOME/workspace/eirini-release/helm/eirini/versions/$file)|g" ~/workspace/eirini-release/deploy/**/*.yml
+  done
+}
+
+main $@
