@@ -6,7 +6,7 @@ trap revert_image_shas EXIT
 
 export SKAFFOLD_DEV_TAG=${SKAFFOLD_DEV_TAG:-please-work}
 export HELM_ENABLE_MULTI_NS=${HELM_ENABLE_MULTI_NS:-false}
-export NATS_PASSWORD=$(pass eirini/ci/nats-password)
+export NATS_PASSWORD=${NATS_PASSWORD:-$(pass eirini/ci/nats-password)}
 export CLUSTER_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}')"
 
 main() {
@@ -22,7 +22,7 @@ create_namespaces() {
 generate_secret() {
   "$HOME/workspace/eirini-release/deploy/scripts/generate_eirini_tls.sh" "$CLUSTER_IP"
   eirini_certs_json=$(kubectl get -n eirini-core secret eirini-certs -o json)
-  echo "$eirini_certs_json" | jq --arg pass "$(echo $NATS_PASSWORD | base64)" '.data["nats-password"]=$pass' | kubectl apply -f -
+  echo "$eirini_certs_json" | jq --arg pass "$(echo -n $NATS_PASSWORD | base64)" '.data["nats-password"]=$pass' | kubectl apply -f -
 }
 
 init_helm() {

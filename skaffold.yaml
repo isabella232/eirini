@@ -14,6 +14,41 @@ build:
       buildCommand: ./scripts/build route-collector
       dependencies:
         command: ./scripts/deps route-collector
+  - image: eirini/eirini-controller
+    custom:
+      buildCommand: ./scripts/build eirini-controller
+      dependencies:
+        command: ./scripts/deps eirini-controller
+  - image: eirini/event-reporter
+    custom:
+      buildCommand: ./scripts/build event-reporter
+      dependencies:
+        command: ./scripts/deps event-reporter
+  - image: eirini/instance-index-env-injector
+    custom:
+      buildCommand: ./scripts/build instance-index-env-injector
+      dependencies:
+        command: ./scripts/deps instance-index-env-injector
+  - image: eirini/metrics-collector
+    custom:
+      buildCommand: ./scripts/build metrics-collector
+      dependencies:
+        command: ./scripts/deps metrics-collector
+  - image: eirini/route-pod-informer
+    custom:
+      buildCommand: ./scripts/build route-pod-informer
+      dependencies:
+        command: ./scripts/deps route-pod-informer
+  - image: eirini/route-statefulset-informer
+    custom:
+      buildCommand: ./scripts/build route-statefulset-informer
+      dependencies:
+        command: ./scripts/deps route-statefulset-informer
+  - image: eirini/task-reporter
+    custom:
+      buildCommand: ./scripts/build task-reporter
+      dependencies:
+        command: ./scripts/deps task-reporter
 # Deployment steps are defined in the profiles below. In order to
 # run a profile do ./scripts/skaffold run -p <profile-name>
 # The reason why there is no default deployment is that our deployment
@@ -64,3 +99,10 @@ profiles:
         artifactOverrides:
           opi.image: eirini/opi
           opi.route_collector_image: eirini/route-collector
+          opi.eirini_controller_image: eirini/eirini-controller
+          opi.event_reporter_image: eirini/event-reporter
+          opi.metrics_collector_image: eirini/metrics-collector
+          opi.route_statefulset_informer_image: eirini/route-statefulset-informer
+          opi.route_pod_informer_image: eirini/route-pod-informer
+          opi.task_reporter_image: eirini/task-reporter
+          instanceIndexEnvInjector.image: eirini/instance-index-env-injector
