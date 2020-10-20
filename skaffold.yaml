@@ -49,13 +49,15 @@ build:
       buildCommand: ./scripts/build task-reporter
       dependencies:
         command: ./scripts/deps task-reporter
+  local:
+    concurrency: 4
 # Deployment steps are defined in the profiles below. In order to
 # run a profile do ./scripts/skaffold run -p <profile-name>
 # The reason why there is no default deployment is that our deployment
 # differ way too much
 deploy:
 profiles:
-- name: single-ns
+- name: helmless-single
   deploy:
     kubectl:
       manifests:
@@ -66,7 +68,8 @@ profiles:
       - ../eirini-release/deploy/metrics/*.yml
       - ../eirini-release/deploy/metrics/single-namespace/*.yml
       - ../eirini-release/deploy/workloads/*.yml
-- name: multi-ns
+      - ../eirini-release/deploy/testing/cc-wiremock/*.yml
+- name: helmless-multi
   deploy:
     kubectl:
       manifests:
@@ -77,8 +80,21 @@ profiles:
       - ../eirini-release/deploy/metrics/*.yml
       - ../eirini-release/deploy/metrics/multi-namespace/*.yml
       - ../eirini-release/deploy/workloads/*.yml
+      - ../eirini-release/deploy/testing/cc-wiremock/*.yml
+# Warning: this profile should only be used for helmless deletion. It is
+# useful if you are trying to delete a helmless deployment but are unsure
+# how it was deployed
+- name: helmless
+  deploy:
+    kubectl:
+      manifests:
+      - ../eirini-release/deploy/**/*.yml
+      - ../eirini-release/deploy/**/**/*.yml
 - name: helm
   deploy:
+    kubectl:
+      manifests:
+      - ../eirini-release/deploy/testing/cc-wiremock/*.yml
     helm:
       releases:
       - name: nats
@@ -89,6 +105,7 @@ profiles:
           auth.user: nats
           auth.password: "{{.NATS_PASSWORD}}"
       - name: eirini
+        wait: true
         chartPath: ../eirini-release/helm/eirini
         namespace: eirini-core
         valuesFiles:

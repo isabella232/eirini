@@ -80,13 +80,13 @@ run_integration_tests() {
 run_eats_helmless_single_ns() {
   echo "Running EATs against single NS helmless deployed eirini on kind"
 
-  run_eats_helmless "false"
+  run_eats_helmless "helmless-single"
 }
 
 run_eats_helmless_multi_ns() {
   echo "Running EATs against multi NS helmless deployed eirini on kind"
 
-  run_eats_helmless "true"
+  run_eats_helmless "helmless-multi"
 }
 
 run_eats_helmful_single_ns() {
@@ -102,17 +102,16 @@ run_eats_helmful_multi_ns() {
 }
 
 run_eats_helmless() {
-  local multi_ns_support
-  multi_ns_support="$1"
+  local profile_name
+  profile_name="$1"
 
   local cluster_name="eats-helmless"
   local kubeconfig="$HOME/.kube/$cluster_name.yml"
 
   ensure_kind_cluster "$cluster_name"
-  if [[ "$redeploy" == "true" ]]; then
-    KUBECONFIG="$kubeconfig" "$EIRINI_RELEASE_DIR/deploy/scripts/cleanup.sh" || true
-    KUBECONFIG="$kubeconfig" USE_MULTI_NAMESPACE="$multi_ns_support" "$EIRINI_RELEASE_DIR/deploy/scripts/deploy.sh"
-  fi
+
+  skaffold delete -p helmless
+  KUBECONFIG="$kubeconfig" $RUN_DIR/skaffold run -p "$profile_name"
 
   local service_name
   service_name=telepresence-$(uuidgen)
@@ -147,10 +146,9 @@ run_eats_helmful() {
   local kubeconfig="$HOME/.kube/$cluster_name.yml"
 
   ensure_kind_cluster "$cluster_name"
-  if [[ "$redeploy" == "true" ]]; then
-    KUBECONFIG="$kubeconfig" "$EIRINI_RELEASE_DIR/helm/scripts/helm-cleanup.sh"
-    KUBECONFIG="$kubeconfig" USE_MULTI_NAMESPACE="$multi_ns_support" "$EIRINI_RELEASE_DIR/helm/scripts/helm-deploy-eirini.sh"
-  fi
+
+  skaffold delete -p helm || true # helm will fail if nothing is deployed
+  KUBECONFIG="$kubeconfig" HELM_ENABLE_MULTI_NS="$multi_ns_support" $RUN_DIR/skaffold run -p helm
 
   local service_name
   service_name=telepresence-$(uuidgen)
