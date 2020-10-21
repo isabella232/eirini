@@ -4,10 +4,6 @@ set -euo pipefail
 
 component=$1
 
-# Eirini deployment yamls refer to unique sha256 versions of the images. We have to remove the exact shas for
-# the locally built image to be used.
-sed -i -e "s|image: eirini/$component.*$|image: eirini/$component|g" ~/workspace/eirini-release/deploy/**/*.yml
-
 dep_packages=$(go list -f '{{ join .Deps "\n" }}' "cmd/$component/main.go" | grep code.cloudfoundry.org/eirini)
 
 for pkg in $dep_packages; do

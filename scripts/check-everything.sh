@@ -165,9 +165,9 @@ run_eats_helmful() {
     --rm \
     -v "$src_dir":/usr/src/app \
     -v "$HOME"/.cache:/root/.cache \
-    -e EIRINI_ADDRESS="https://eirini-opi.cf.svc.cluster.local:8085" \
+    -e EIRINI_ADDRESS="https://eirini-opi.eirini-core.svc.cluster.local:8085" \
     -e EIRINI_TLS_SECRET=eirini-certs \
-    -e EIRINI_SYSTEM_NS=cf \
+    -e EIRINI_SYSTEM_NS=eirini-core \
     -e EIRINI_WORKLOADS_NS=eirini \
     -e EIRINIUSER_PASSWORD="$EIRINIUSER_PASSWORD" \
     -e INTEGRATION_KUBECONFIG="/usr/src/app/$cluster_name.yml" \

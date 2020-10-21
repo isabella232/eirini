@@ -49,8 +49,6 @@ build:
       buildCommand: ./scripts/build task-reporter
       dependencies:
         command: ./scripts/deps task-reporter
-  local:
-    concurrency: 4
 # Deployment steps are defined in the profiles below. In order to
 # run a profile do ./scripts/skaffold run -p <profile-name>
 # The reason why there is no default deployment is that our deployment
@@ -105,7 +103,6 @@ profiles:
           auth.user: nats
           auth.password: "{{.NATS_PASSWORD}}"
       - name: eirini
-        wait: true
         chartPath: ../eirini-release/helm/eirini
         namespace: eirini-core
         valuesFiles:
