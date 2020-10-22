@@ -16,4 +16,4 @@ done |
   jq -R . |
   jq -s . |
   jq ". += [\"cmd/$component/main.go\"]" |
-  jq 'sort_by(.) | .[]'
+  jq 'sort_by(.) | .'
