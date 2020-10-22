@@ -3,6 +3,8 @@ kind: Config
 metadata:
   name: eirini
 build:
+  local:
+    concurrency: 4
   artifacts:
   - image: eirini/opi
     custom:
