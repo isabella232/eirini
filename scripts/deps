@@ -12,4 +12,8 @@ for pkg in $dep_packages; do
   for file in $files; do
     echo "$pkg_dir/$file"
   done
-done | jq -R . | jq -s .
+done |
+  jq -R . |
+  jq -s . |
+  jq ". += [\"cmd/$component/main.go\"]" |
+  jq 'sort_by(.) | .[]'
