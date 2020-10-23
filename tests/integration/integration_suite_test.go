@@ -41,7 +41,7 @@ var _ = AfterSuite(func() {
 })
 
 func TestIntegration(t *testing.T) {
-	SetDefaultEventuallyTimeout(4 * time.Minute)
+	SetDefaultEventuallyTimeout(30 * time.Second)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Integration Suite")
 }
