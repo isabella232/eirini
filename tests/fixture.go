@@ -19,6 +19,7 @@ import (
 	// nolint:golint,stylecheck
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -129,6 +130,88 @@ func (f *Fixture) CreateExtraNamespace() string {
 func (f *Fixture) configureNewNamespace() string {
 	namespace := CreateRandomNamespace(f.Clientset)
 	Expect(CreatePodCreationPSP(namespace, getPspName(namespace), GetApplicationServiceAccount(), f.Clientset)).To(Succeed(), "failed to create pod creation PSP")
+
+	namespacedRole := &v1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "eirini-namespaced-role",
+			Namespace: namespace,
+		},
+		Rules: []v1.PolicyRule{
+			{
+				APIGroups: []string{"batch"},
+				Resources: []string{"jobs"},
+				Verbs:     []string{"create", "delete", "update", "patch"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"statefulsets"},
+				Verbs:     []string{"create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"delete", "patch"},
+			},
+			{
+				APIGroups: []string{"policy"},
+				Resources: []string{"poddisruptionbudgets"},
+				Verbs:     []string{"create", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"create", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"eirini.cloudfoundry.org"},
+				Resources: []string{"lrps/status"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"eirini.cloudfoundry.org"},
+				Resources: []string{"lrps/status"},
+				Verbs:     []string{"update"},
+			},
+		},
+	}
+	_, err := f.Clientset.RbacV1().Roles(namespace).Create(context.Background(), namespacedRole, metav1.CreateOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	namespacedRoleBinding := &v1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "eirini-namespaced-rolebinding",
+			Namespace: namespace,
+		},
+		Subjects: []v1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "opi",
+				Namespace: "eirini-core",
+			},
+			{
+				Kind:      "ServiceAccount",
+				Name:      "eirini-controller",
+				Namespace: "eirini-core",
+			},
+			{
+				Kind:      "ServiceAccount",
+				Name:      "eirini-task-reporter",
+				Namespace: "eirini-core",
+			},
+		},
+		RoleRef: v1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "eirini-namespaced-role",
+		},
+	}
+	_, err = f.Clientset.RbacV1().RoleBindings(namespace).Create(context.Background(), namespacedRoleBinding, metav1.CreateOptions{})
+	Expect(err).NotTo(HaveOccurred())
 
 	return namespace
 }

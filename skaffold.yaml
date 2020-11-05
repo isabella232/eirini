@@ -62,11 +62,8 @@ profiles:
     kubectl:
       manifests:
       - ../eirini-release/deploy/core/*.yml
-      - ../eirini-release/deploy/core/single-namespace/*.yml
       - ../eirini-release/deploy/events/*.yml
-      - ../eirini-release/deploy/events/single-namespace/*.yml
       - ../eirini-release/deploy/metrics/*.yml
-      - ../eirini-release/deploy/metrics/single-namespace/*.yml
       - ../eirini-release/deploy/workloads/*.yml
       - ../eirini-release/deploy/testing/cc-wiremock/*.yml
 - name: helmless-multi
@@ -74,11 +71,8 @@ profiles:
     kubectl:
       manifests:
       - ../eirini-release/deploy/core/*.yml
-      - ../eirini-release/deploy/core/multi-namespace/*.yml
       - ../eirini-release/deploy/events/*.yml
-      - ../eirini-release/deploy/events/multi-namespace/*.yml
       - ../eirini-release/deploy/metrics/*.yml
-      - ../eirini-release/deploy/metrics/multi-namespace/*.yml
       - ../eirini-release/deploy/workloads/*.yml
       - ../eirini-release/deploy/testing/cc-wiremock/*.yml
 # Warning: this profile should only be used for helmless deletion. It is
