@@ -18,6 +18,9 @@ main() {
   expose-docker-network
   create-kind-cluster
   document-local-registry
+
+  generate-cf-for-k8s-values
+  deploy-cf
 }
 
 create-kind-config() {
@@ -37,16 +40,19 @@ nodes:
     hostPath: $CC_NG_DIR
     readOnly: true
 EOF
+
   # https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/deploy-local.md
-  pushd ${CF4K8S_DIR}
-  k8s_minor_version="$(yq r supported_k8s_versions.yml newest_version)" # or k8s_minor_version="1.17"
-  patch_version=$(wget -q https://registry.hub.docker.com/v1/repositories/kindest/node/tags -O - |
-    jq -r '.[].name' | grep -E "^v${k8s_minor_version}.[0-9]+$" |
-    cut -d. -f3 | sort -rn | head -1)
-  k8s_version="v${k8s_minor_version}.${patch_version}"
-  echo "Creating KinD cluster with Kubernetes version ${k8s_version}"
-  yq merge deploy/kind/cluster.yml "$temp_conf" >"${KIND_CONF}"
-  popd
+  pushd "$CF4K8S_DIR" || exit 1
+  {
+    k8s_minor_version="$(yq r supported_k8s_versions.yml newest_version)" # or k8s_minor_version="1.17"
+    patch_version=$(wget -q https://registry.hub.docker.com/v1/repositories/kindest/node/tags -O - |
+      jq -r '.[].name' | grep -E "^v${k8s_minor_version}.[0-9]+$" |
+      cut -d. -f3 | sort -rn | head -1)
+    k8s_version="v${k8s_minor_version}.${patch_version}"
+    echo "Creating KinD cluster with Kubernetes version ${k8s_version}"
+    yq merge deploy/kind/cluster.yml "$temp_conf" >"${KIND_CONF}"
+  }
+  popd || exit 1
 }
 
 cleanup-existing-cluster() {
@@ -70,8 +76,10 @@ create-kind-cluster() {
 }
 
 generate-cf-for-k8s-values() {
-  ./hack/generate-values.sh -d vcap.me >${TMP_DIR}/cf-values.yml
-  cat <<EOF >>${TMP_DIR}/cf-values.yml
+  pushd "$CF4K8S_DIR" || exit 1
+  {
+    ./hack/generate-values.sh -d vcap.me >${TMP_DIR}/cf-values.yml
+    cat <<EOF >>${TMP_DIR}/cf-values.yml
 add_metrics_server_components: true
 enable_automount_service_account_token: true
 metrics_server_prefer_internal_kubelet_address: true
@@ -83,14 +91,18 @@ load_balancer:
 
 app_registry:
   hostname: "localhost:${REG_PORT}"
+  username: "a"
+  password: "a"
+  repository_prefix: "/"
 EOF
-
+  }
+  popd || exit 1
 }
 
 deploy-cf() {
   kapp deploy -a cf -f <(
     ytt -f "$CF4K8S_DIR/config" \
-      -f patched_cc.yml \
+      -f ${SCRIPT_DIR}/assets/local-cloud-controller.yml \
       -f ${TMP_DIR}/cf-values.yml >${TMP_DIR}/cf-for-k8s-rendered.yml
   ) -y
 }

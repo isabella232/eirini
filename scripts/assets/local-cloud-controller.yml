@@ -1,0 +1,25 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:overlay", "overlay")
+
+#! This is a ytt file meant to add the local cloud_controller_ng directory
+#! and use it to launch the api server instead of what's on the image.
+#! This is inteaded for local development using kind and the setup-cc-work-env.sh
+#! script.
+#@overlay/match by=overlay.subset({"kind":"Deployment","metadata":{"name":"cf-api-server"}})
+---
+spec:
+  template:
+    spec:
+      volumes:
+      #@overlay/append
+      - name: local-cloud-controller
+        hostPath:
+          path: /cc-workspace
+          type: Directory
+      containers:
+      #@overlay/match by=overlay.subset({"name":"cf-api-server"})
+        - name: cf-api-server
+          volumeMounts:
+          #@overlay/append
+          - name: local-cloud-controller
+            mountPath: /workspace
