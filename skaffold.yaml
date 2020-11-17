@@ -87,6 +87,10 @@ profiles:
         namespace: eirini-core
         valuesFiles:
         - ../eirini-release/helm/scripts/assets/helm-values-template.yml
+        setValueTemplates:
+          opi.cc-api.tls_disabled: "{{.CC_TLS_DISABLED}}"
+          opi.cc-api.protocol: "{{.API_PROTOCOL}}"
+          opi.cc-api.port: "{{.API_PORT}}"
         artifactOverrides:
           opi.image: eirini/opi
           opi.route_collector_image: eirini/route-collector

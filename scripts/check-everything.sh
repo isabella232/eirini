@@ -151,6 +151,9 @@ run_eats_helmful() {
     -e EIRINI_WORKLOADS_NS=eirini \
     -e EIRINIUSER_PASSWORD="$EIRINIUSER_PASSWORD" \
     -e INTEGRATION_KUBECONFIG="/usr/src/app/$cluster_name.yml" \
+    -e CC_TLS_DISABLED=${CC_TLS_DISABLED:-false} \
+    -e API_PROTOCOL=${API_PROTOCOL:-https} \
+    -e API_PORT=${API_PORT:-9083} \
     eirini/ci \
     /usr/src/app/scripts/run_eats_tests.sh "$@"
 }
@@ -176,6 +179,7 @@ run_subset() {
 
   if [[ "$run_eats_helmful" == "true" ]]; then
     run_eats_helmful "$@"
+    CC_TLS_DISABLED=true API_PROTOCOL=http API_PORT=80 run_eats_helmful "$@"
   fi
 
   if [[ "$run_linter" == "true" ]]; then
