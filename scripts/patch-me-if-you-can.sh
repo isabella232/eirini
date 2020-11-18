@@ -157,7 +157,9 @@ checkout_stable_cf_for_k8s_deps() {
 
   pushd "$CAPIK8S_DIR"
   {
-    ccng_sha=$(git show -s "$capi_k8s_release_sha" | awk '/ccng:/ {found=1}; /sha:/ { if (found == 1) print $2; found = 0 }')
+    echo "Getting the revision of the cloud_controller_ng submodule"
+    git checkout "$capi_k8s_release_sha"
+    ccng_sha="$(git show $capi_k8s_release_sha | grep cloud_controller_ng/commit | awk -F '/' '{print $NF}')"
     echo "cloud_controller_ng version: $ccng_sha"
   }
   popd
