@@ -8,37 +8,61 @@ readonly TMP_DIR="$(mktemp -d)"
 readonly KIND_CONF="${TMP_DIR}/kind-config-cc-work-env"
 readonly CC_NG_DIR="${HOME}/workspace/capi-release/src/cloud_controller_ng/"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "$SCRIPT_DIR/local-registry-helpers.sh"
+readonly REGISTRY_URL="local-registry.default.svc.cluster.local:5000"
+# source "$SCRIPT_DIR/local-registry-helpers.sh"
 
 main() {
   echo "Creating a kind cluster with cc code mounted"
   cleanup-existing-cluster
   create-kind-config
-  run-local-registry
-  expose-docker-network
+  # expose-docker-network
   create-kind-cluster
+  run-local-registry
   document-local-registry
 
   generate-cf-for-k8s-values
   deploy-cf
 }
 
+run-local-registry() {
+  kubectl apply -f "$SCRIPT_DIR/assets/registry.yaml"
+}
+
+document-local-registry() {
+  # Document the local registry
+  # https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
+  cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-registry-hosting
+  namespace: kube-public
+data:
+  localRegistryHosting.v1: |
+    host: "${REGISTRY_URL}"
+    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+EOF
+}
+
 create-kind-config() {
   local temp_conf
   temp_conf="$(mktemp)"
-  trap "rm $temp_conf" EXIT
+  # trap "rm $temp_conf" EXIT
 
   cat <<EOF >"${temp_conf}"
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${REG_PORT}"]
-    endpoint = ["http://${REG_NAME}:${REG_PORT}"]
 nodes:
 - role: control-plane
   extraMounts:
   - containerPath: /cc-workspace
     hostPath: $CC_NG_DIR
-    readOnly: true
+    readOnly: false
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".containerd]
+  disable_snapshot_annotations = true
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+    endpoint = ["http://${REGISTRY_URL}"]
 EOF
 
   # https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/deploy-local.md
@@ -90,10 +114,10 @@ load_balancer:
   enable: false
 
 app_registry:
-  hostname: "localhost:${REG_PORT}"
+  hostname: "${REGISTRY_URL}"
   username: "a"
   password: "a"
-  repository_prefix: "/"
+  repository_prefix: "${REGISTRY_URL}"
 EOF
   }
   popd || exit 1
@@ -102,8 +126,9 @@ EOF
 deploy-cf() {
   kapp deploy -a cf -f <(
     ytt -f "$CF4K8S_DIR/config" \
+      -f ${TMP_DIR}/cf-values.yml \
       -f ${SCRIPT_DIR}/assets/local-cloud-controller.yml \
-      -f ${TMP_DIR}/cf-values.yml >${TMP_DIR}/cf-for-k8s-rendered.yml
+      -f ${SCRIPT_DIR}/assets/local-registry.yml
   ) -y
 }
 

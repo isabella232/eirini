@@ -1,0 +1,41 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2020-11-18T14:06:22Z"
+  generation: 1
+  labels:
+    app: local-registry
+  name: local-registry
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: local-registry
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: local-registry
+    spec:
+      containers:
+      - image: registry:2
+        name: private-repository-k8s
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: local-registry
+  name: local-registry
+spec:
+  ports:
+  - port: 5000
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    app: local-registry
