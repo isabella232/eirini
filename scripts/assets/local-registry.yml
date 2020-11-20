@@ -1,7 +1,0 @@
-#@ load("@ytt:data", "data")
-#@ load("@ytt:overlay", "overlay")
-
-#@overlay/match by=overlay.subset({"kind":"Builder","metadata":{"name":"cf-default-builder"}})
----
-spec:
-  tag: gcr.io/cff-eirini-peace-pods/cf-workloads/cf-default-builder

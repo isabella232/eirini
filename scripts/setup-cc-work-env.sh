@@ -8,40 +8,15 @@ readonly TMP_DIR="$(mktemp -d)"
 readonly KIND_CONF="${TMP_DIR}/kind-config-cc-work-env"
 readonly CC_NG_DIR="${HOME}/workspace/capi-release/src/cloud_controller_ng/"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-readonly REGISTRY_URL="local-registry.default.svc.cluster.local:5000"
-# source "$SCRIPT_DIR/local-registry-helpers.sh"
+readonly GCP_SERVICE_ACCOUNT_JSON=$(pass eirini/gcs-eirini-ci-terraform-json-key)
 
 main() {
   echo "Creating a kind cluster with cc code mounted"
   cleanup-existing-cluster
   create-kind-config
-  # expose-docker-network
   create-kind-cluster
-  run-local-registry
-  document-local-registry
-
   generate-cf-for-k8s-values
   deploy-cf
-}
-
-run-local-registry() {
-  kubectl apply -f "$SCRIPT_DIR/assets/registry.yaml"
-}
-
-document-local-registry() {
-  # Document the local registry
-  # https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
-  cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: local-registry-hosting
-  namespace: kube-public
-data:
-  localRegistryHosting.v1: |
-    host: "${REGISTRY_URL}"
-    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
-EOF
 }
 
 create-kind-config() {
@@ -56,13 +31,6 @@ nodes:
   - containerPath: /cc-workspace
     hostPath: $CC_NG_DIR
     readOnly: false
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".containerd]
-  disable_snapshot_annotations = true
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
-    endpoint = ["http://${REGISTRY_URL}"]
 EOF
 
   # https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/deploy-local.md
@@ -102,7 +70,8 @@ create-kind-cluster() {
 generate-cf-for-k8s-values() {
   pushd "$CF4K8S_DIR" || exit 1
   {
-    ./hack/generate-values.sh -d vcap.me >${TMP_DIR}/cf-values.yml
+    echo ${GCP_SERVICE_ACCOUNT_JSON} >${TMP_DIR}/gcp-service-account-json
+    ./hack/generate-values.sh -d vcap.me -g ${TMP_DIR}/gcp-service-account-json >${TMP_DIR}/cf-values.yml
     cat <<EOF >>${TMP_DIR}/cf-values.yml
 add_metrics_server_components: true
 enable_automount_service_account_token: true
@@ -112,12 +81,6 @@ use_first_party_jwt_tokens: true
 
 load_balancer:
   enable: false
-
-app_registry:
-  hostname: "${REGISTRY_URL}"
-  username: "a"
-  password: "a"
-  repository_prefix: "${REGISTRY_URL}"
 EOF
   }
   popd || exit 1
@@ -127,8 +90,7 @@ deploy-cf() {
   kapp deploy -a cf -f <(
     ytt -f "$CF4K8S_DIR/config" \
       -f ${TMP_DIR}/cf-values.yml \
-      -f ${SCRIPT_DIR}/assets/local-cloud-controller.yml \
-      -f ${SCRIPT_DIR}/assets/local-registry.yml
+      -f ${SCRIPT_DIR}/assets/local-cloud-controller.yml
   ) -y
 }
 
