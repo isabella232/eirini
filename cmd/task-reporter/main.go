@@ -71,6 +71,8 @@ func main() {
 		Scheme:             kscheme.Scheme,
 		Logger:             util.NewLagerLogr(taskLogger),
 		Namespace:          cfg.WorkloadsNamespace,
+		LeaderElection:     true,
+		LeaderElectionID:   "eirini.task.reporter",
 	}
 
 	mgr, err := manager.New(kubeConfig, mgrOptions)
