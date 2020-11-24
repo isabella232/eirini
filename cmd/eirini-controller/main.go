@@ -1,10 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
 	"code.cloudfoundry.org/eirini"
 	cmdcommons "code.cloudfoundry.org/eirini/cmd"
 	"code.cloudfoundry.org/eirini/k8s"
@@ -18,6 +14,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +22,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,7 +68,7 @@ func main() {
 		LeaderElectionID:   "eirini-controller-leader",
 	}
 
-	if runningOutsideCluster(eiriniCfg) {
+	if cmdcommons.RunningOutsideCluster(eiriniCfg.Properties.ConfigPath) {
 		managerOptions.LeaderElectionNamespace = "default"
 	}
 
@@ -175,8 +174,4 @@ func createPodCrashReconciler(
 	crashEventGenerator := eirinievent.NewDefaultCrashEventGenerator(eventsClient)
 
 	return reconciler.NewPodCrash(logger, controllerClient, crashEventGenerator, eventsClient, statefulSetClient)
-}
-
-func runningOutsideCluster(cfg *eirini.Config) bool {
-	return cfg.Properties.ConfigPath != ""
 }

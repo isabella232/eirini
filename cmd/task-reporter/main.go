@@ -1,11 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"net/http"
-	"os"
-	"path/filepath"
-
 	"code.cloudfoundry.org/eirini"
 	cmdcommons "code.cloudfoundry.org/eirini/cmd"
 	"code.cloudfoundry.org/eirini/k8s"
@@ -17,10 +12,14 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
+	"os"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -71,6 +70,12 @@ func main() {
 		Scheme:             kscheme.Scheme,
 		Logger:             util.NewLagerLogr(taskLogger),
 		Namespace:          cfg.WorkloadsNamespace,
+		LeaderElection:     true,
+		LeaderElectionID:   "task-reporter-leader",
+	}
+
+	if cmdcommons.RunningOutsideCluster(cfg.ConfigPath) {
+		mgrOptions.LeaderElectionNamespace = "default"
 	}
 
 	mgr, err := manager.New(kubeConfig, mgrOptions)

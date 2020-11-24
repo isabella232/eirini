@@ -1,11 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
 	"code.cloudfoundry.org/eirini"
 	cmdcommons "code.cloudfoundry.org/eirini/cmd"
 	"code.cloudfoundry.org/eirini/events"
@@ -16,12 +11,16 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/tlsconfig"
 	"code.cloudfoundry.org/tps/cc_client"
+	"crypto/tls"
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,13 +71,22 @@ func main() {
 		emitter,
 	)
 
-	mgr, err := manager.New(kubeConfig, manager.Options{
+	managerOptions := manager.Options{
 		// do not serve prometheus metrics; disabled because port clashes during integration tests
 		MetricsBindAddress: "0",
 		Namespace:          cfg.WorkloadsNamespace,
 		Scheme:             kscheme.Scheme,
 		Logger:             util.NewLagerLogr(crashLogger),
-	})
+		LeaderElection:     true,
+		LeaderElectionID:   "event-reporter-leader",
+	}
+
+	if cmdcommons.RunningOutsideCluster(cfg.ConfigPath) {
+		managerOptions.LeaderElectionNamespace = "default"
+	}
+
+	mgr, err := manager.New(kubeConfig, managerOptions)
+
 	cmdcommons.ExitfIfError(err, "Failed to create k8s controller runtime manager")
 
 	predicates := []predicate.Predicate{reconciler.NewSourceTypeUpdatePredicate("APP")}
