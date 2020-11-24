@@ -16,7 +16,8 @@ import (
 )
 
 type options struct {
-	ConfigFile string `short:"c" long:"config" description:"Config for running event-reporter"`
+	ConfigFile      string `short:"c" long:"config" description:"Config for running event-reporter"`
+	RegistrationJob bool   `short:"r" long:"registration-job" description:"only register the webhook. Omit to run the webhook service"`
 }
 
 func main() {
@@ -30,7 +31,6 @@ func main() {
 	log := lager.NewLogger("instance-index-env-injector")
 	log.RegisterSink(lager.NewPrettySink(os.Stdout, lager.DEBUG))
 
-	register := true
 	filterEiriniApps := true
 
 	managerOptions := eirinix.ManagerOptions{
@@ -39,15 +39,25 @@ func main() {
 		ServiceName:         cfg.ServiceName,
 		WebhookNamespace:    cfg.ServiceNamespace,
 		FilterEiriniApps:    &filterEiriniApps,
-		RegisterWebHook:     &register,
 		OperatorFingerprint: cfg.EiriniXOperatorFingerprint,
 		KubeConfig:          cfg.ConfigPath,
 		Namespace:           cfg.WorkloadsNamespace,
 	}
 
+	if !opts.RegistrationJob {
+		f := false
+		managerOptions.RegisterWebHook = &f
+	}
+
 	manager := eirinix.NewManager(managerOptions)
 	err = manager.AddExtension(webhook.NewInstanceIndexEnvInjector(log))
-	cmdcommons.ExitfIfError(err, "failed to register the instance index env injector extension")
+	cmdcommons.ExitfIfError(err, "failed to add the instance index env injector extension")
+
+	if opts.RegistrationJob {
+		err = manager.RegisterExtensions()
+		cmdcommons.ExitfIfError(err, "failed to register the instance index env injector extension")
+		return
+	}
 
 	log.Fatal("instance-index-env-injector-errored", manager.Start())
 }
