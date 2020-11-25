@@ -81,6 +81,10 @@ func (r PodCrash) Reconcile(request reconcile.Request) (reconcile.Result, error)
 		return reconcile.Result{}, nil
 	}
 
+	if strconv.FormatInt(crashEvent.CrashTimestamp, 10) == pod.Annotations[k8s.AnnotationLastReportedLRPCrash] {
+		return reconcile.Result{}, nil
+	}
+
 	statefulSetRef, err := r.getOwner(pod, statefulSetKind)
 	if err != nil {
 		logger.Debug("pod-without-statefulset-owner")
@@ -130,7 +134,7 @@ func (r PodCrash) setCrashTimestampOnPod(logger lager.Logger, pod *corev1.Pod, c
 		newPod.Annotations = map[string]string{}
 	}
 
-	newPod.Annotations[k8s.AnnotationLastReportedAppCrash] = strconv.FormatInt(crashEvent.CrashTimestamp, 10)
+	newPod.Annotations[k8s.AnnotationLastReportedLRPCrash] = strconv.FormatInt(crashEvent.CrashTimestamp, 10)
 
 	if err := r.pods.Patch(context.Background(), newPod, client.MergeFrom(pod)); err != nil {
 		logger.Error("failed-to-set-last-crash-time-on-pod", err)

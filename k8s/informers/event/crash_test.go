@@ -42,6 +42,9 @@ var _ = Describe("Event", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name",
 				Namespace: "namespace",
+				Annotations: map[string]string{
+					k8s.AnnotationLastReportedAppCrash: "42",
+				},
 			},
 		}
 
@@ -57,6 +60,9 @@ var _ = Describe("Event", func() {
 			p := o.(*corev1.Pod)
 			p.Name = pod.Name
 			p.Namespace = pod.Namespace
+			p.Annotations = map[string]string{
+				k8s.AnnotationLastReportedAppCrash: "42",
+			}
 
 			return nil
 		}
@@ -137,6 +143,49 @@ var _ = Describe("Event", func() {
 	When("the app does not have to be reported", func() {
 		BeforeEach(func() {
 			eventGenerator.GenerateReturns(crashEvent, false)
+		})
+
+		It("does NOT send a crash event", func() {
+			Expect(crashEmitter.EmitCallCount()).To(Equal(0))
+		})
+	})
+
+	When("the app crash has not previously crashed", func() {
+		BeforeEach(func() {
+			controllerClient.GetStub = func(c context.Context, nn types.NamespacedName, o runtime.Object) error {
+				p := o.(*corev1.Pod)
+				p.Name = pod.Name
+				p.Namespace = pod.Namespace
+				p.Annotations = nil
+
+				return nil
+			}
+
+			eventGenerator.GenerateReturns(crashEvent, true)
+		})
+
+		It("sends a crash event", func() {
+			Expect(crashEmitter.EmitCallCount()).To(Equal(1))
+		})
+	})
+
+	When("the app crash has already been reported", func() {
+		BeforeEach(func() {
+			crashTimestamp := int64(123456)
+
+			controllerClient.GetStub = func(c context.Context, nn types.NamespacedName, o runtime.Object) error {
+				p := o.(*corev1.Pod)
+				p.Name = pod.Name
+				p.Namespace = pod.Namespace
+				p.Annotations = map[string]string{
+					k8s.AnnotationLastReportedAppCrash: strconv.FormatInt(crashTimestamp, 10),
+				}
+
+				return nil
+			}
+
+			crashEvent.CrashTimestamp = crashTimestamp
+			eventGenerator.GenerateReturns(crashEvent, true)
 		})
 
 		It("does NOT send a crash event", func() {
