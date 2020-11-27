@@ -3,6 +3,7 @@
 set -euo pipefail
 
 readonly CF4K8S_DIR="$HOME/workspace/cf-for-k8s"
+readonly CAPIK8S_DIR="$HOME/workspace/capi-k8s-release"
 readonly CLUSTER_NAME="cc-work-env"
 readonly TMP_DIR="$(mktemp -d)"
 readonly KIND_CONF="${TMP_DIR}/kind-config-cc-work-env"
@@ -12,26 +13,31 @@ readonly GCP_SERVICE_ACCOUNT_JSON=$(pass eirini/gcs-eirini-ci-terraform-json-key
 
 main() {
   echo "Creating a kind cluster with cc code mounted"
-  cleanup-existing-cluster
-  create-kind-config
-  create-kind-cluster
+  # cleanup-existing-cluster
+  # create-kind-config
+  # create-kind-cluster
+  build_ccng_image
   generate-cf-for-k8s-values
   deploy-cf
+}
+
+build_ccng_image() {
+  export IMAGE_DESTINATION_CCNG="docker.io/eirini/dev-ccng"
+  export IMAGE_DESTINATION_CF_API_CONTROLLERS="docker.io/eirini/dev-controllers"
+  export IMAGE_DESTINATION_REGISTRY_BUDDY="docker.io/eirini/dev-registry-buddy"
+  git -C "$CAPIK8S_DIR" checkout values/images.yml
+  "$CAPIK8S_DIR"/scripts/build-into-values.sh "$CAPIK8S_DIR/values/images.yml"
+  "$CAPIK8S_DIR"/scripts/bump-cf-for-k8s.sh
+
+  # update respective vendir directories in cf-for-k8s
+  cp -r "$CAPIK8S_DIR/values/" "$CF4K8S_DIR/config/capi/_ytt_lib/capi-k8s-release/"
+  cp -r "$CAPIK8S_DIR/templates/" "$CF4K8S_DIR/config/capi/_ytt_lib/capi-k8s-release/"
 }
 
 create-kind-config() {
   local temp_conf
   temp_conf="$(mktemp)"
-  # trap "rm $temp_conf" EXIT
-
-  cat <<EOF >"${temp_conf}"
-nodes:
-- role: control-plane
-  extraMounts:
-  - containerPath: /cc-workspace
-    hostPath: $CC_NG_DIR
-    readOnly: false
-EOF
+  trap "rm $temp_conf" EXIT
 
   # https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/deploy-local.md
   pushd "$CF4K8S_DIR" || exit 1
@@ -89,8 +95,7 @@ EOF
 deploy-cf() {
   kapp deploy -a cf -f <(
     ytt -f "$CF4K8S_DIR/config" \
-      -f ${TMP_DIR}/cf-values.yml \
-      -f ${SCRIPT_DIR}/assets/local-cloud-controller.yml
+      -f ${TMP_DIR}/cf-values.yml
   ) -y
 }
 
