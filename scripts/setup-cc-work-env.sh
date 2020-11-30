@@ -37,7 +37,6 @@ build_ccng_image() {
 create-kind-config() {
   local temp_conf
   temp_conf="$(mktemp)"
-  trap "rm $temp_conf" EXIT
 
   # https://github.com/cloudfoundry/cf-for-k8s/blob/develop/docs/deploy-local.md
   pushd "$CF4K8S_DIR" || exit 1
@@ -48,7 +47,8 @@ create-kind-config() {
       cut -d. -f3 | sort -rn | head -1)
     k8s_version="v${k8s_minor_version}.${patch_version}"
     echo "Creating KinD cluster with Kubernetes version ${k8s_version}"
-    yq merge deploy/kind/cluster.yml "$temp_conf" >"${KIND_CONF}"
+    ls -la "$temp_conf"
+    cp deploy/kind/cluster.yml "${KIND_CONF}"
   }
   popd || exit 1
 }
