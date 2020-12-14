@@ -10,9 +10,6 @@ if [ -z ${EIRINIUSER_PASSWORD+x} ]; then
   EIRINIUSER_PASSWORD="$(pass eirini/docker-hub)"
 fi
 
-export TELEPRESENCE_EXPOSE_PORT_START=10000
-export TELEPRESENCE_SERVICE_NAME
-
 clusterLock=$HOME/.kind-cluster.lock
 
 ensure_kind_cluster() {
@@ -46,44 +43,15 @@ run_unit_tests() {
 run_integration_tests() {
   local kubeconfig="$HOME/.kube/config"
 
-  if [[ "$use_kind" == "true" ]]; then
-    local cluster_name="integration-tests"
-    kubeconfig="$HOME/.kube/$cluster_name.yml"
-    ensure_kind_cluster "$cluster_name"
-  fi
-
   echo "#########################################"
   echo "Running integration tests on $(KUBECONFIG=$kubeconfig kubectl config current-context)"
   echo "#########################################"
   echo
 
-  local service_name
-  service_name=telepresence-$(uuidgen)
-
-  local src_dir
-  src_dir=$(mktemp -d)
-  cp -a "$EIRINI_DIR" "$src_dir"
-  cp "$kubeconfig" "$src_dir"
-  trap "rm -rf $src_dir" EXIT
-
-  KUBECONFIG="$kubeconfig" telepresence \
-    --method container \
-    --new-deployment "$service_name" \
-    --expose 10000 \
-    --expose 10001 \
-    --expose 10002 \
-    --expose 10003 \
-    --docker-run \
-    --rm \
-    -v "$src_dir":/usr/src/app \
-    -v "$HOME"/.cache:/root/.cache \
-    -e INTEGRATION_KUBECONFIG="/usr/src/app/$(basename $kubeconfig)" \
-    -e EIRINIUSER_PASSWORD="$EIRINIUSER_PASSWORD" \
-    -e TELEPRESENCE_EXPOSE_PORT_START=10000 \
-    -e TELEPRESENCE_SERVICE_NAME="$service_name" \
-    -e NODES=4 \
-    eirini/ci \
-    /usr/src/app/scripts/run_integration_tests.sh "$@"
+  INTEGRATION_KUBECONFIG="/usr/src/app/$(basename $kubeconfig)" \
+  EIRINIUSER_PASSWORD="$EIRINIUSER_PASSWORD" \
+  NODES=8 \
+    "$EIRINI_DIR/scripts/kinda_run_tests.sh" ./scripts/run_integration_tests.sh "$@"
 }
 
 run_eats_helmless() {

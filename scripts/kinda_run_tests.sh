@@ -24,7 +24,7 @@ main() {
 }
 
 cleanup() {
-  kubectl --namespace eirini-test delete job,configmap,secret --all --wait=true
+  kubectl --namespace eirini-test delete job,configmap,secret,service --all --wait=true
 
   for ns in $(kubectl get namespaces | grep "opi-integration-test" | awk '{ print $1 }'); do
     echo Deleting leftover namespace $ns
@@ -69,7 +69,7 @@ run_tests() {
   kubectl apply -f "$SCRIPT_DIR/assets/kinda-run-tests/test-job.yml"
 
   for i in $(seq 120); do
-    pod_name=$(kubectl --namespace eirini-test get pods -l "job-name=eirini-integration-tests" -o json | jq -r '.items[0].metadata.name')
+    pod_name=$(kubectl --namespace eirini-test get pods -l "job-name=eirini-test" -o json | jq -r '.items[0].metadata.name')
     if [ "$pod_name" != "null" ]; then
       break
     fi
@@ -83,7 +83,7 @@ run_tests() {
 
   kubectl --namespace eirini-test wait pod $pod_name --for=condition=Ready
 
-  kubectl --namespace eirini-test logs -f job/eirini-integration-tests
+  kubectl --namespace eirini-test logs -f job/eirini-test
 }
 
 main "$@"

@@ -2,9 +2,7 @@ package instance_index_injector_test
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"os"
 
 	"code.cloudfoundry.org/eirini"
@@ -18,24 +16,34 @@ import (
 )
 
 var _ = Describe("InstanceIndexInjector", func() {
+	const (
+		// as defined in scripts/assets/kinda-run-tests/test-job.yml
+		serviceNamespace = "eirini-test"
+		testPodName      = "eirini-test"
+	)
+
 	var (
 		config         *eirini.InstanceIndexEnvInjectorConfig
 		configFilePath string
 		hookSession    *gexec.Session
 		pod            *corev1.Pod
-		fingerprint    string
+		serviceName    string
 	)
 
 	BeforeEach(func() {
-		port := tests.GetTelepresencePort()
-		telepresenceService := tests.GetTelepresenceServiceName()
-		fingerprint = "instance-id-" + tests.GenerateGUID()[:8]
+		guid := tests.GenerateGUID()[:8]
+		port := int32(10000 + GinkgoParallelNode() - 1)
+		serviceName = fmt.Sprintf("env-injector-%d-%s", GinkgoParallelNode(), guid)
 
+		// create service that routes to the env injector server created by eirinix
+		tests.CreateService(fixture.Clientset, serviceNamespace, serviceName, map[string]string{"name": testPodName}, port)
+
+		// config & run env injector binary that uses eirinix to create a server and mutating webhook
 		config = &eirini.InstanceIndexEnvInjectorConfig{
-			ServiceName:                telepresenceService,
-			ServicePort:                int32(port),
-			ServiceNamespace:           "default",
-			EiriniXOperatorFingerprint: fingerprint,
+			ServiceName:                serviceName,
+			ServicePort:                port,
+			ServiceNamespace:           serviceNamespace,
+			EiriniXOperatorFingerprint: serviceName,
 			WorkloadsNamespace:         fixture.Namespace,
 			KubeConfig: eirini.KubeConfig{
 				ConfigPath: fixture.KubeConfigPath,
@@ -43,21 +51,7 @@ var _ = Describe("InstanceIndexInjector", func() {
 		}
 		hookSession, configFilePath = eiriniBins.InstanceIndexEnvInjector.Run(config)
 
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
-		}
-		client := &http.Client{Transport: tr}
-		Eventually(func() (int, error) {
-			resp, err := client.Get(fmt.Sprintf("https://%s.default.svc:%d/0", telepresenceService, port))
-			if err != nil {
-				printMessage(fmt.Sprintf("failed to call telepresence: %s" + err.Error()))
-
-				return 0, err
-			}
-			resp.Body.Close()
-
-			return resp.StatusCode, nil
-		}, "2m", "500ms").Should(Equal(http.StatusOK))
+		tests.WaitForServiceReadiness(serviceNamespace, serviceName, port, "/0", true)
 
 		pod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -88,9 +82,12 @@ var _ = Describe("InstanceIndexInjector", func() {
 		if hookSession != nil {
 			Eventually(hookSession.Kill()).Should(gexec.Exit())
 		}
-		err := fixture.Clientset.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.Background(), fingerprint+"-mutating-hook", metav1.DeleteOptions{})
+		tests.DeleteService(fixture.Clientset, serviceNamespace, serviceName)
+
+		// cleanup artifacts created by eirinix
+		err := fixture.Clientset.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.Background(), serviceName+"-mutating-hook", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		err = fixture.Clientset.CoreV1().Secrets("default").Delete(context.Background(), fingerprint+"-setupcertificate", metav1.DeleteOptions{})
+		err = fixture.Clientset.CoreV1().Secrets(serviceNamespace).Delete(context.Background(), serviceName+"-setupcertificate", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -126,8 +123,3 @@ var _ = Describe("InstanceIndexInjector", func() {
 		Expect(getCFInstanceIndex(pod, "not-opi")).To(Equal(""))
 	})
 })
-
-func printMessage(str string) {
-	_, err := GinkgoWriter.Write([]byte(str))
-	Expect(err).NotTo(HaveOccurred())
-}

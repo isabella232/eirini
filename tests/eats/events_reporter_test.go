@@ -1,11 +1,9 @@
 package eats_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"code.cloudfoundry.org/eirini/k8s"
 	"code.cloudfoundry.org/eirini/models/cf"
@@ -14,8 +12,6 @@ import (
 	"code.cloudfoundry.org/runtimeschema/cc_messages"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("EventsReporter [needs-logs-for: eirini-api, eirini-event-reporter]", func() {
@@ -136,50 +132,23 @@ var _ = Describe("EventsReporter [needs-logs-for: eirini-api, eirini-event-repor
 })
 
 func exposeLRP(namespace, guid string, appPort int32, pingPath ...string) string {
-	service, err := fixture.Clientset.CoreV1().Services(namespace).Create(context.Background(), &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "service-" + guid,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Port: appPort,
-				},
-			},
-			Selector: map[string]string{
-				k8s.LabelGUID: guid,
-			},
-		},
-	}, metav1.CreateOptions{})
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	serviceName := tests.CreateService(
+		fixture.Clientset,
+		namespace,
+		fmt.Sprintf("service-%s", guid),
+		map[string]string{k8s.LabelGUID: guid},
+		appPort,
+	)
 
 	if len(pingPath) > 0 {
-		pingURL := &url.URL{
-			Scheme: "http",
-			Host:   fmt.Sprintf("%s.%s:%d", service.Name, namespace, appPort),
-			Path:   pingPath[0],
-		}
-
-		EventuallyWithOffset(1, func() error {
-			resp, err := http.Get(pingURL.String())
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("request failed: %s", resp.Status)
-			}
-
-			return nil
-		}).Should(Succeed())
+		tests.WaitForServiceReadiness(namespace, serviceName, appPort, pingPath[0], false)
 	}
 
-	return service.Name
+	return serviceName
 }
 
 func unexposeLRP(namespace, serviceName string) {
-	ExpectWithOffset(1, fixture.Clientset.CoreV1().Services(namespace).Delete(context.Background(), serviceName, metav1.DeleteOptions{})).To(Succeed())
+	tests.DeleteService(fixture.Clientset, namespace, serviceName)
 }
 
 func verifyCrashRequest(requestMatcher wiremock.RequestMatcher, exitStatus int) {

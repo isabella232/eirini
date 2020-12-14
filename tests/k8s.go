@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 
 	"code.cloudfoundry.org/cfhttp/v2"
@@ -22,6 +23,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -284,4 +286,60 @@ func CreateTestServer(certPath, keyPath, caCertPath string) (*ghttp.Server, erro
 	testServer.HTTPTestServer.TLS = tlsConf
 
 	return testServer, nil
+}
+
+func CreateService(clientset kubernetes.Interface, namespace, name string, selector map[string]string, appPort int32) string {
+	service, err := clientset.CoreV1().Services(namespace).Create(context.Background(), &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       appPort,
+					TargetPort: intstr.FromInt(int(appPort)),
+				},
+			},
+			Selector: selector,
+		},
+	}, metav1.CreateOptions{})
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	return service.Name
+}
+
+func WaitForServiceReadiness(namespace, name string, appPort int32, pingPath string, useTLS bool) {
+	pingURL := &url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s.%s.svc:%d", name, namespace, appPort),
+		Path:   pingPath,
+	}
+
+	tr := &http.Transport{}
+	if useTLS {
+		pingURL.Scheme = "https"
+		tr = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+		}
+	}
+
+	client := &http.Client{Transport: tr}
+
+	EventuallyWithOffset(1, func() error {
+		resp, err := client.Get(pingURL.String())
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("request failed: %s", resp.Status)
+		}
+
+		return nil
+	}, "2m").Should(Succeed())
+}
+
+func DeleteService(clientset kubernetes.Interface, namespace, name string) {
+	ExpectWithOffset(1, clientset.CoreV1().Services(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})).To(Succeed())
 }

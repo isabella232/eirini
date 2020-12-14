@@ -2,11 +2,14 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: eirini-integration-tests
+  name: eirini-test
   namespace: eirini-test
 spec:
   backoffLimit: 0
   template:
+    metadata:
+      labels:
+        name: eirini-test
     spec:
       serviceAccountName: eirini-integration-tests
       containers:
