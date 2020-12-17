@@ -4,6 +4,7 @@ set -xeuo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly EIRINI_DIR="$(readlink -f $SCRIPT_DIR/..)"
+readonly EIRINI_COMMIT=${EIRINI_COMMIT:-"HEAD"}
 readonly CLUSTER_NAME="run-tests"
 readonly TMP_DIR="$(mktemp -d)"
 readonly EIRINI_BINS="$EIRINI_DIR/tmp"
@@ -61,7 +62,8 @@ run_tests() {
   kubectl apply -f "$SCRIPT_DIR/assets/kinda-run-tests/go-cache-pvc.yml"
 
   kubectl --namespace eirini-test create configmap test-config \
-    --from-literal="TEST_SCRIPT=$TEST_SCRIPT"
+    --from-literal="TEST_SCRIPT=$TEST_SCRIPT" \
+    --from-literal="EIRINI_COMMIT=$EIRINI_COMMIT"
 
   kubectl --namespace eirini-test create secret generic test-secret \
     --from-literal="EIRINIUSER_PASSWORD=${EIRINIUSER_PASSWORD}"

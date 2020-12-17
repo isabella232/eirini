@@ -16,6 +16,8 @@ spec:
       - name: tests
         image: eirini/ci
         env:
+        - name: WORK_DIR
+          value: "/workspace"
         envFrom:
         - secretRef:
             name: test-secret
@@ -24,18 +26,37 @@ spec:
         command:
         - /bin/bash
         - -c
-        - "/eirini/scripts/assets/kinda-run-tests/prepare_test_run.sh"
+        - |
+            set -ex
+
+            EIRINI_DIR="$WORK_DIR/eirini"
+            EIRINI_COMMIT=${EIRINI_COMMIT:-"HEAD"}
+
+            mkdir -p "$WORK_DIR"
+
+            if [ -d "/eirini" ]; then
+              cp -a /eirini "$WORK_DIR"
+            else
+              git clone https://github.com/cloudfoundry-incubator/eirini.git "$EIRINI_DIR"
+            fi
+
+            pushd "$EIRINI_DIR"
+            {
+              git checkout "$EIRINI_COMMIT"
+              $TEST_SCRIPT
+            }
+            popd
         volumeMounts:
-        - name: eirini-code
-          mountPath: /eirini
+        # - name: eirini-code
+        #   mountPath: /eirini
         - name: go-cache
           mountPath: /root/.cache/go-build
       restartPolicy: Never
       volumes:
-      - name: eirini-code
-        hostPath:
-          path: /eirini
-          type: Directory
+      # - name: eirini-code
+      #   hostPath:
+      #     path: /eirini
+      #     type: Directory
       - name: go-cache
         persistentVolumeClaim:
           claimName: go-cache
